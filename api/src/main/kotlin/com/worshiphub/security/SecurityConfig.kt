@@ -1,0 +1,64 @@
+package com.worshiphub.security
+
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
+import org.springframework.security.config.annotation.web.builders.HttpSecurity
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
+import org.springframework.security.config.http.SessionCreationPolicy
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import org.springframework.web.cors.CorsConfigurationSource
+
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
+class SecurityConfig(
+    private val jwtAuthenticationFilter: JwtAuthenticationFilter,
+    private val corsConfigurationSource: CorsConfigurationSource
+) {
+
+    @Bean
+    fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder(12) // Increased strength
+
+    @Bean
+    fun filterChain(http: HttpSecurity): SecurityFilterChain {
+        http
+            .csrf { it.disable() } // Disabled for REST API
+            .cors { it.configurationSource(corsConfigurationSource) }
+            .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .headers { headers ->
+                headers
+                    .frameOptions { it.deny() }
+                    .contentTypeOptions { it.and() }
+                    .httpStrictTransportSecurity { hstsConfig ->
+                        hstsConfig
+                            .maxAgeInSeconds(31536000) // 1 year
+                            .includeSubDomains(true)
+                    }
+            }
+            .authorizeHttpRequests { auth ->
+                auth
+                    // Public endpoints
+                    .requestMatchers("/", "/api/v1/health").permitAll()
+                    .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/api-docs/**").permitAll()
+                    .requestMatchers("/h2-console/**").permitAll() // Development only
+                    .requestMatchers("/api/v1/auth/**").permitAll()
+                    .requestMatchers("/api/v1/auth/email/verify/**").permitAll()
+                    .requestMatchers("/api/v1/auth/password/**").permitAll()
+                    .requestMatchers("/api/v1/auth/church/register").permitAll()
+                    .requestMatchers("/api/v1/invitations/*/accept").permitAll()
+                    .requestMatchers("/api/v1/invitations/*").permitAll() // GET invitation details
+                    .requestMatchers("/actuator/**").permitAll() // Health checks
+                    
+                    // Protected endpoints
+                    .requestMatchers("/api/v1/**").authenticated()
+                    .anyRequest().permitAll() // Allow other requests for development
+            }
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
+
+        return http.build()
+    }
+}

@@ -1,0 +1,88 @@
+server:
+  port: 9090
+  error:
+    include-stacktrace: never
+    include-message: always
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    min-response-size: 1024
+
+spring:
+  application:
+    name: WorshipHub API
+  datasource:
+    url: ${DATABASE_URL:jdbc:h2:mem:worshiphub}
+    driver-class-name: ${DATABASE_DRIVER:org.h2.Driver}
+    username: ${DATABASE_USERNAME:sa}
+    password: ${DATABASE_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+      pool-name: WorshipHubCP
+  jpa:
+    hibernate:
+      ddl-auto: ${DDL_AUTO:create-drop}
+    show-sql: ${JPA_SHOW_SQL:false}
+    properties:
+      hibernate:
+        format_sql: ${JPA_FORMAT_SQL:false}
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+    open-in-view: false # Disabled for performance
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    locations: classpath:db/migration
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:true}
+    validate-on-migrate: ${FLYWAY_VALIDATE_ON_MIGRATE:true}
+  h2:
+    console:
+      enabled: ${H2_CONSOLE_ENABLED:false} # Disabled by default
+      path: /h2-console
+      settings:
+        web-allow-others: false
+  security:
+    require-ssl: false # Set to true in production
+
+jwt:
+  secret: ${JWT_SECRET:mySecretKeyForDevelopmentThatIsAtLeast32CharactersLong123456789}
+  expiration: ${JWT_EXPIRATION:3600000} # 1 hour
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:86400000} # 24 hours
+
+# springdoc configuration is handled by default
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+  info:
+    env:
+      enabled: true
+
+logging:
+  level:
+    com.worshiphub: INFO
+    org.springframework: WARN
+    org.springframework.security: INFO
+    org.hibernate.SQL: WARN
+    org.springframework.web.filter.CommonsRequestLoggingFilter: INFO
+    org.gradle: WARN
+    root: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%X{correlationId:-}] [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%X{correlationId:-}] [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/worshiphub.log
+    max-size: 10MB
+    max-history: 30

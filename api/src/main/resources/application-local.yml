@@ -1,0 +1,40 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/worshiphub
+    username: postgres
+    password: admin
+    driver-class-name: org.postgresql.Driver
+      
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+    
+  flyway:
+    enabled: false
+    
+  h2:
+    console:
+      enabled: false
+      
+  security:
+    require-ssl: false
+
+server:
+  port: 9090
+
+jwt:
+  secret: ${JWT_SECRET:local-dev-secret-key-for-development-only-not-for-production-use-32chars}
+  expiration: ${JWT_EXPIRATION:3600000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:86400000}
+
+logging:
+  level:
+    com.worshiphub: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.flywaydb: INFO

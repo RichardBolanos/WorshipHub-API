@@ -1,0 +1,36 @@
+spring:
+  datasource:
+    # Configuración por defecto para H2 (testing)
+    url: ${DATABASE_URL:jdbc:h2:mem:worshiphub}
+    username: ${DATABASE_USERNAME:sa}
+    password: ${DATABASE_PASSWORD:}
+    driver-class-name: ${DATABASE_DRIVER:org.h2.Driver}
+    
+  jpa:
+    hibernate:
+      ddl-auto: ${DDL_AUTO:create-drop} # validate para PostgreSQL
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        
+  flyway:
+    enabled: ${FLYWAY_ENABLED:false} # true para PostgreSQL
+    
+  h2:
+    console:
+      enabled: ${H2_CONSOLE_ENABLED:true}
+      
+  security:
+    require-ssl: false
+
+jwt:
+  secret: ${JWT_SECRET:dev-secret-key-for-development-only-not-for-production-use}
+
+logging:
+  level:
+    com.worshiphub: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.flywaydb: INFO
