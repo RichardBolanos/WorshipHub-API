@@ -34,7 +34,7 @@ class AuditService {
             "reason" to (reason ?: "No reason provided")
         )
         
-        logger.info("AUDIT: Role change - User: $userId, $oldRole -> $newRole, Changed by: $changedBy")
+        logger.info("AUDIT: Role change - User: {}, {} -> {}, Changed by: {}", userId, oldRole.name, newRole.name, changedBy)
         
         // TODO: In production, store in dedicated audit table or external audit system
     }
@@ -58,7 +58,7 @@ class AuditService {
             "details" to details
         )
         
-        logger.info("AUDIT: Authentication - Event: $event, Email: $email, Success: $success")
+        logger.info("AUDIT: Authentication - Event: {}, Email: {}, Success: {}", event, sanitizeForLog(email), success)
         
         // TODO: In production, store in dedicated audit table or external audit system
     }
@@ -82,8 +82,12 @@ class AuditService {
             "churchId" to churchId.toString()
         )
         
-        logger.info("AUDIT: Invitation - Event: $event, Email: $email, Invited by: $invitedBy")
+        logger.info("AUDIT: Invitation - Event: {}, Email: {}, Invited by: {}", event, sanitizeForLog(email), invitedBy)
         
         // TODO: In production, store in dedicated audit table or external audit system
+    }
+    
+    private fun sanitizeForLog(input: String?): String? {
+        return input?.replace("[\r\n\t]".toRegex(), "_")
     }
 }

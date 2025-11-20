@@ -7,5 +7,6 @@ import java.util.*
  */
 data class CreateCategoryCommand(
     val name: String,
+    val songId: UUID,
     val churchId: UUID
 )

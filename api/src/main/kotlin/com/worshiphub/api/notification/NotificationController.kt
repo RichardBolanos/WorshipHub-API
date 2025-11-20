@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
 import java.util.*
 
@@ -26,19 +28,30 @@ class NotificationController(
         ApiResponse(responseCode = "404", description = "User not found")
     ])
     @GetMapping
+    @PreAuthorize("hasRole('TEAM_MEMBER') or hasRole('WORSHIP_LEADER') or hasRole('CHURCH_ADMIN')")
     fun getUserNotifications(
         @Parameter(description = "User ID", required = true) @RequestHeader("User-Id") userId: UUID
-    ): List<Map<String, Any>> {
-        val notifications = notificationApplicationService.getUserNotifications(userId)
-        return notifications.map { notification ->
-            mapOf(
-                "id" to notification.id,
-                "title" to notification.title,
-                "message" to notification.message,
-                "type" to notification.type,
-                "isRead" to notification.isRead,
-                "createdAt" to notification.createdAt
-            )
+    ): ResponseEntity<List<Map<String, Any>>> {
+        return try {
+            val result = notificationApplicationService.getUserNotifications(userId)
+            val notifications = if (result.isSuccess) {
+                result.getOrThrow()
+            } else {
+                return ResponseEntity.badRequest().build()
+            }
+            val response = notifications.map { notification ->
+                mapOf(
+                    "id" to notification.id,
+                    "title" to notification.title,
+                    "message" to notification.message,
+                    "type" to notification.type,
+                    "isRead" to notification.isRead,
+                    "createdAt" to notification.createdAt
+                )
+            }
+            ResponseEntity.ok(response)
+        } catch (e: Exception) {
+            ResponseEntity.internalServerError().build()
         }
     }
     
@@ -51,10 +64,19 @@ class NotificationController(
         ApiResponse(responseCode = "404", description = "Notification not found")
     ])
     @PatchMapping("/{notificationId}/read")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('TEAM_MEMBER') or hasRole('WORSHIP_LEADER') or hasRole('CHURCH_ADMIN')")
     fun markAsRead(
         @Parameter(description = "Notification ID", required = true) @PathVariable notificationId: UUID
-    ) {
-        notificationApplicationService.markAsRead(notificationId)
+    ): ResponseEntity<Void> {
+        return try {
+            val result = notificationApplicationService.markAsRead(notificationId)
+            if (result.isSuccess) {
+                ResponseEntity.noContent().build()
+            } else {
+                ResponseEntity.badRequest().build()
+            }
+        } catch (e: Exception) {
+            ResponseEntity.internalServerError().build()
+        }
     }
 }

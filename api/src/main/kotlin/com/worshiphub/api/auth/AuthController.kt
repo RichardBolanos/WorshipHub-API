@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.util.*
 
@@ -29,10 +30,11 @@ class AuthController(
     @ApiResponses(value = [
         ApiResponse(responseCode = "200", description = "Login successful"),
         ApiResponse(responseCode = "401", description = "Invalid credentials"),
+        ApiResponse(responseCode = "403", description = "Email verification required or account inactive"),
         ApiResponse(responseCode = "400", description = "Invalid request data")
     ])
     @PostMapping("/login")
-    fun login(@Valid @RequestBody request: LoginRequest): LoginResponse {
+    fun login(@Valid @RequestBody request: LoginRequest): ResponseEntity<*> {
         return when (val result = authenticationService.authenticate(request.email, request.password)) {
             is AuthenticationResult.Success -> {
                 val token = jwtTokenProvider.generateToken(
@@ -40,7 +42,7 @@ class AuthController(
                     churchId = result.user.churchId.toString(),
                     roles = listOf(result.user.role.name)
                 )
-                LoginResponse(
+                ResponseEntity.ok(LoginResponse(
                     token = token,
                     tokenType = "Bearer",
                     expiresIn = 86400,
@@ -52,10 +54,17 @@ class AuthController(
                         role = result.user.role.name,
                         churchId = result.user.churchId
                     )
-                )
+                ))
             }
-            is AuthenticationResult.EmailNotVerified -> throw RuntimeException("Email verification required. Please check your email and verify your account.")
-            is AuthenticationResult.Failure -> throw RuntimeException(result.message)
+            is AuthenticationResult.EmailNotVerified -> 
+                ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(mapOf("error" to "EMAIL_NOT_VERIFIED", "message" to "Email verification required. Please check your email and verify your account."))
+            is AuthenticationResult.AccountInactive -> 
+                ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(mapOf("error" to "ACCOUNT_INACTIVE", "message" to "Account is inactive. Please verify your email to activate your account."))
+            is AuthenticationResult.Failure -> 
+                ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(mapOf("error" to "INVALID_CREDENTIALS", "message" to result.message))
         }
     }
 
@@ -65,12 +74,11 @@ class AuthController(
     )
     @ApiResponses(value = [
         ApiResponse(responseCode = "201", description = "User registered successfully"),
-        ApiResponse(responseCode = "400", description = "Invalid registration data"),
-        ApiResponse(responseCode = "409", description = "User already exists")
+        ApiResponse(responseCode = "400", description = "Invalid registration data or password validation failed"),
+        ApiResponse(responseCode = "409", description = "User with this email already exists")
     ])
     @PostMapping("/register")
-    @ResponseStatus(HttpStatus.CREATED)
-    fun register(@Valid @RequestBody request: RegisterRequest): RegisterResponse {
+    fun register(@Valid @RequestBody request: RegisterRequest): ResponseEntity<*> {
         val command = RegisterUserCommand(
             email = request.email,
             firstName = request.firstName,
@@ -80,11 +88,16 @@ class AuthController(
         )
         
         return when (val result = authenticationService.register(command)) {
-            is RegisterResult.Success -> RegisterResponse(
-                userId = result.userId,
-                message = "User registered successfully"
-            )
-            is RegisterResult.Failure -> throw RuntimeException(result.message)
+            is RegisterResult.Success -> ResponseEntity.status(HttpStatus.CREATED)
+                .body(RegisterResponse(
+                    userId = result.userId,
+                    message = "User registered successfully"
+                ))
+            is RegisterResult.Failure -> {
+                val status = if (result.message.contains("already exists")) HttpStatus.CONFLICT else HttpStatus.BAD_REQUEST
+                ResponseEntity.status(status)
+                    .body(mapOf("error" to "REGISTRATION_FAILED", "message" to result.message))
+            }
         }
     }
 }

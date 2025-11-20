@@ -14,6 +14,11 @@ interface InvitationTokenRepository {
     fun save(invitation: InvitationToken): InvitationToken
     
     /**
+     * Finds an invitation by its ID.
+     */
+    fun findById(id: UUID): InvitationToken?
+    
+    /**
      * Finds an invitation by its token string.
      */
     fun findByToken(token: String): InvitationToken?

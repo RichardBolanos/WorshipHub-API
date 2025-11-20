@@ -38,24 +38,34 @@ class SecurityConfig(
                             .maxAgeInSeconds(31536000) // 1 year
                             .includeSubDomains(true)
                     }
+                    .and()
+                    .headers { h -> h.cacheControl { } }
             }
             .authorizeHttpRequests { auth ->
                 auth
                     // Public endpoints
-                    .requestMatchers("/", "/api/v1/health").permitAll()
+                    .requestMatchers("/", "/api/v1/health", "/api/v1/system/**").permitAll()
                     .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/api-docs/**").permitAll()
                     .requestMatchers("/h2-console/**").permitAll() // Development only
                     .requestMatchers("/api/v1/auth/**").permitAll()
+                    .requestMatchers("/login/oauth2/**", "/oauth2/**").permitAll() // OAuth2 endpoints
                     .requestMatchers("/api/v1/auth/email/verify/**").permitAll()
                     .requestMatchers("/api/v1/auth/password/**").permitAll()
                     .requestMatchers("/api/v1/auth/church/register").permitAll()
                     .requestMatchers("/api/v1/invitations/*/accept").permitAll()
                     .requestMatchers("/api/v1/invitations/*").permitAll() // GET invitation details
                     .requestMatchers("/actuator/**").permitAll() // Health checks
+                    .requestMatchers("/api/v1/songs").permitAll() // Temporary: Allow public access to songs
                     
                     // Protected endpoints
                     .requestMatchers("/api/v1/**").authenticated()
                     .anyRequest().permitAll() // Allow other requests for development
+            }
+            .oauth2Login { oauth2 ->
+                oauth2
+                    .loginPage("/oauth2/authorization/google")
+                    .defaultSuccessUrl("/api/v1/auth/oauth2/google/callback", true)
+                    .failureUrl("/login?error=oauth2_error")
             }
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
 

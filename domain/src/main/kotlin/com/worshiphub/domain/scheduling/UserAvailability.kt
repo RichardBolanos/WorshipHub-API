@@ -32,4 +32,45 @@ data class UserAvailability(
     
     @Column(nullable = false)
     val createdAt: LocalDateTime = LocalDateTime.now()
-)
+) {
+    
+    /**
+     * Updates the reason for unavailability.
+     */
+    fun updateReason(newReason: String?): UserAvailability {
+        return copy(reason = newReason?.take(200)) // Limit to 200 characters
+    }
+    
+    /**
+     * Checks if this unavailability is for a future date.
+     */
+    fun isFuture(): Boolean {
+        return unavailableDate.isAfter(LocalDate.now())
+    }
+    
+    /**
+     * Checks if this unavailability conflicts with a given date.
+     */
+    fun conflictsWith(date: LocalDate): Boolean {
+        return unavailableDate == date
+    }
+    
+    /**
+     * Checks if this unavailability is within a date range.
+     */
+    fun isWithinRange(startDate: LocalDate, endDate: LocalDate): Boolean {
+        return !unavailableDate.isBefore(startDate) && !unavailableDate.isAfter(endDate)
+    }
+    
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is UserAvailability) return false
+        return id == other.id
+    }
+
+    override fun hashCode(): Int = id.hashCode()
+
+    override fun toString(): String {
+        return "UserAvailability(id=$id, userId=$userId, unavailableDate=$unavailableDate)"
+    }
+}

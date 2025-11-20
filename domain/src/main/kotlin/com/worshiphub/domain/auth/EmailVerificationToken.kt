@@ -1,5 +1,6 @@
 package com.worshiphub.domain.auth
 
+import jakarta.persistence.*
 import java.time.LocalDateTime
 import java.util.*
 
@@ -14,13 +15,29 @@ import java.util.*
  * @property isUsed Whether the token has been used
  * @property createdAt Token creation timestamp
  */
+@Entity
+@Table(name = "email_verification_tokens")
 data class EmailVerificationToken(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
+    
+    @Column(nullable = false)
     val userId: UUID,
+    
+    @Column(nullable = false, unique = true)
     val token: String,
+    
+    @Column(nullable = false)
     val email: String,
+    
+    @Column(nullable = false)
     val expiresAt: LocalDateTime,
+    
+    @Column(nullable = false)
     val isUsed: Boolean = false,
+    
+    @Column(nullable = false)
     val createdAt: LocalDateTime = LocalDateTime.now()
 ) {
     /**

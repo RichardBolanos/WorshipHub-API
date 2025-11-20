@@ -14,8 +14,8 @@ data class LoginRequest(
     val email: String,
     
     @field:NotBlank(message = "Password is required")
-    @field:Size(min = 6, message = "Password must be at least 6 characters")
-    @Schema(description = "User password (minimum 6 characters)", example = "mySecurePassword123", required = true)
+    @field:Size(min = 8, message = "Password must be at least 8 characters")
+    @Schema(description = "User password (minimum 8 characters)", example = "mySecurePassword123", required = true)
     val password: String
 )
 
@@ -71,8 +71,8 @@ data class RegisterRequest(
     val email: String,
     
     @field:NotBlank(message = "Password is required")
-    @field:Size(min = 6, message = "Password must be at least 6 characters")
-    @Schema(description = "User password (minimum 6 characters)", example = "mySecurePassword123", required = true)
+    @field:Size(min = 8, message = "Password must be at least 8 characters")
+    @Schema(description = "User password (minimum 8 characters)", example = "mySecurePassword123", required = true)
     val password: String,
     
     @Schema(description = "Church ID to associate user with (optional for new church creation)", example = "987fcdeb-51a2-43d1-9c4e-123456789abc")

@@ -13,12 +13,16 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import com.worshiphub.api.common.BusinessException
 import jakarta.validation.ConstraintViolationException
 import java.time.LocalDateTime
+import org.slf4j.LoggerFactory
+import org.hibernate.StaleObjectStateException
 
 /**
  * Global exception handler for secure error responses.
  */
 @RestControllerAdvice
 class GlobalExceptionHandler {
+
+    private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidationExceptions(
@@ -30,6 +34,8 @@ class GlobalExceptionHandler {
             val errorMessage = error.defaultMessage ?: "Invalid value"
             fieldName to errorMessage
         }
+        
+        logger.error("Validation error on {}: {}", request.getDescription(false), errors, ex)
         
         val errorResponse = ErrorResponse(
             timestamp = LocalDateTime.now(),
@@ -118,7 +124,7 @@ class GlobalExceptionHandler {
         request: WebRequest
     ): ResponseEntity<ErrorResponse> {
         // Log the actual exception for debugging (don't expose to client)
-        println("Runtime exception: ${ex.message}")
+        logger.error("Runtime exception on {}: {}", request.getDescription(false), ex.message, ex)
         
         val errorResponse = ErrorResponse(
             timestamp = LocalDateTime.now(),
@@ -129,6 +135,24 @@ class GlobalExceptionHandler {
         )
         
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse)
+    }
+
+    @ExceptionHandler(StaleObjectStateException::class)
+    fun handleStaleObjectState(
+        ex: StaleObjectStateException,
+        request: WebRequest
+    ): ResponseEntity<ErrorResponse> {
+        logger.error("Stale object state exception on {}: {}", request.getDescription(false), ex.message, ex)
+        
+        val errorResponse = ErrorResponse(
+            timestamp = LocalDateTime.now(),
+            status = HttpStatus.CONFLICT.value(),
+            error = "Concurrency Conflict",
+            message = "The resource was modified by another process. Please refresh and try again.",
+            path = request.getDescription(false).removePrefix("uri=")
+        )
+        
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse)
     }
 
     @ExceptionHandler(BusinessException::class)
@@ -153,7 +177,7 @@ class GlobalExceptionHandler {
         request: WebRequest
     ): ResponseEntity<ErrorResponse> {
         // Log the actual exception for debugging (don't expose to client)
-        println("Unexpected exception: ${ex.message}")
+        logger.error("Unexpected exception on {}: {}", request.getDescription(false), ex.message, ex)
         
         val errorResponse = ErrorResponse(
             timestamp = LocalDateTime.now(),

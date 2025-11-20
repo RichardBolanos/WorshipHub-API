@@ -36,7 +36,45 @@ data class Attachment(
     
     @Column(nullable = false)
     val createdAt: LocalDateTime = LocalDateTime.now()
-)
+) {
+    
+    /**
+     * Validates if the URL is accessible.
+     */
+    fun isValidUrl(): Boolean {
+        return try {
+            url.startsWith("http://") || url.startsWith("https://")
+        } catch (e: Exception) {
+            false
+        }
+    }
+    
+    /**
+     * Checks if this is a streaming service link.
+     */
+    fun isStreamingLink(): Boolean {
+        return type in listOf(AttachmentType.YOUTUBE_LINK, AttachmentType.SPOTIFY_LINK)
+    }
+    
+    /**
+     * Checks if this is a downloadable resource.
+     */
+    fun isDownloadable(): Boolean {
+        return type in listOf(AttachmentType.PDF_SHEET, AttachmentType.AUDIO_FILE)
+    }
+    
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Attachment) return false
+        return id == other.id
+    }
+
+    override fun hashCode(): Int = id.hashCode()
+
+    override fun toString(): String {
+        return "Attachment(id=$id, name='$name', type=$type)"
+    }
+}
 
 /**
  * Types of attachments that can be associated with songs.

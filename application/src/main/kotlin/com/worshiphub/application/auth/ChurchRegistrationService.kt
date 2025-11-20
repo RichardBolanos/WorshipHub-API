@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
+import org.slf4j.LoggerFactory
 
 /**
  * Application service for complete church registration with admin user.
@@ -23,6 +24,8 @@ class ChurchRegistrationService(
     private val emailVerificationService: EmailVerificationService,
     private val emailService: EmailService
 ) {
+    
+    private val logger = LoggerFactory.getLogger(ChurchRegistrationService::class.java)
     
     /**
      * Registers a new church with its first admin user.
@@ -49,7 +52,10 @@ class ChurchRegistrationService(
             address = command.churchAddress,
             email = command.churchEmail
         )
+        logger.info("Created church domain object: id=${church.id}, name=${church.name}")
+        
         val savedChurch = churchRepository.save(church)
+        logger.info("Church saved successfully: id=${savedChurch.id}")
         
         // Create admin user
         val hashedPassword = passwordEncoder.encode(command.adminPassword)

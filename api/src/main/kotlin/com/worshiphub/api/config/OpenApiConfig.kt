@@ -19,11 +19,11 @@ class OpenApiConfig {
                 Info()
                     .title("WorshipHub API")
                     .version("1.0.0")
-                    .description("API for WorshipHub - Worship Team Management Platform")
+                    .description("API for WorshipHub - Worship Team. Management Platform")
                     .contact(
                         Contact()
                             .name("WorshipHub Team")
-                            .email("support@worshiphub.com")
+                            .email("richarandres1998@gmail.com")
                     )
             )
             .addSecurityItem(SecurityRequirement().addList("Bearer Authentication"))

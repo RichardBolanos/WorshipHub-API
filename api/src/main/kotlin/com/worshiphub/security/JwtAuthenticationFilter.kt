@@ -19,12 +19,13 @@ class JwtAuthenticationFilter(
         response: HttpServletResponse,
         filterChain: FilterChain
     ) {
-        val token = extractTokenFromRequest(request)
-        
-        if (token != null && jwtTokenProvider.validateToken(token)) {
-            val userId = jwtTokenProvider.getUserIdFromToken(token)
-            val churchId = jwtTokenProvider.getChurchIdFromToken(token)
-            val roles = jwtTokenProvider.getRolesFromToken(token)
+        try {
+            val token = extractTokenFromRequest(request)
+            
+            if (token != null && jwtTokenProvider.validateToken(token)) {
+                val userId = jwtTokenProvider.getUserIdFromToken(token)
+                val churchId = jwtTokenProvider.getChurchIdFromToken(token)
+                val roles = jwtTokenProvider.getRolesFromToken(token)
             
             // Create authentication with user roles
             val authorities = roles.map { SimpleGrantedAuthority(it) }
@@ -38,7 +39,11 @@ class JwtAuthenticationFilter(
                 "churchId" to churchId
             )
             
-            SecurityContextHolder.getContext().authentication = authentication
+                SecurityContextHolder.getContext().authentication = authentication
+            }
+        } catch (e: Exception) {
+            // Clear security context on error
+            SecurityContextHolder.clearContext()
         }
         
         filterChain.doFilter(request, response)

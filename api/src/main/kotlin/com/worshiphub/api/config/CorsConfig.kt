@@ -12,11 +12,21 @@ class CorsConfig {
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
-        configuration.allowedOriginPatterns = listOf("*")
-        configuration.allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-        configuration.allowedHeaders = listOf("*")
+        // Secure CORS - only allow specific origins in production
+        configuration.allowedOriginPatterns = listOf(
+            "http://localhost:3000",
+            "http://localhost:8080", 
+            "https://*.worshiphub.com"
+        )
+        configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
+        configuration.allowedHeaders = listOf(
+            "Authorization", 
+            "Content-Type", 
+            "X-Requested-With",
+            "Accept"
+        )
         configuration.allowCredentials = true
-        configuration.maxAge = 3600L
+        configuration.maxAge = 3600L // Cache preflight for 1 hour
 
         val source = UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", configuration)

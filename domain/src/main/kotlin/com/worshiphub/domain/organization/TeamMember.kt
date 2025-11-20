@@ -32,7 +32,19 @@ data class TeamMember(
     
     @Column(nullable = false)
     val joinedAt: LocalDateTime = LocalDateTime.now()
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is TeamMember) return false
+        return id == other.id
+    }
+
+    override fun hashCode(): Int = id.hashCode()
+
+    override fun toString(): String {
+        return "TeamMember(id=$id, teamId=$teamId, userId=$userId, role=$teamRole)"
+    }
+}
 
 /**
  * Specific roles within a worship team.

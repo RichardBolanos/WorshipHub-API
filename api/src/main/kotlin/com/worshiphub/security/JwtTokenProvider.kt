@@ -1,5 +1,6 @@
 package com.worshiphub.security
 
+import com.worshiphub.application.auth.JwtTokenService
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import io.jsonwebtoken.security.Keys
@@ -10,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.crypto.SecretKey
 
 @Component
-class JwtTokenProvider {
+class JwtTokenProvider : JwtTokenService {
 
     @Value("\${jwt.secret}")
     private lateinit var jwtSecret: String
@@ -24,59 +25,96 @@ class JwtTokenProvider {
     private val blacklistedTokens = ConcurrentHashMap<String, Long>()
     
     private val secretKey: SecretKey by lazy {
-        if (jwtSecret.isBlank()) {
-            throw IllegalStateException("JWT secret must be provided via JWT_SECRET environment variable")
+        try {
+            if (jwtSecret.isBlank()) {
+                throw IllegalStateException("JWT secret must be provided via JWT_SECRET environment variable")
+            }
+            Keys.hmacShaKeyFor(jwtSecret.toByteArray())
+        } catch (e: Exception) {
+            throw IllegalStateException("Failed to initialize JWT secret key", e)
         }
-        Keys.hmacShaKeyFor(jwtSecret.toByteArray())
     }
 
-    fun generateToken(userId: String, churchId: String, roles: List<String>): String {
-        val now = Date()
-        val expiryDate = Date(now.time + jwtExpiration)
+    override fun generateToken(userId: String, churchId: String, roles: List<String>): String {
+        return try {
+            require(userId.isNotBlank()) { "User ID cannot be blank" }
+            require(churchId.isNotBlank()) { "Church ID cannot be blank" }
+            require(roles.isNotEmpty()) { "Roles cannot be empty" }
+            
+            val now = Date()
+            val expiryDate = Date(now.time + jwtExpiration)
+            val jti = UUID.randomUUID().toString() // Unique token ID
 
-        return Jwts.builder()
-            .setSubject(userId)
-            .claim("churchId", churchId)
-            .claim("roles", roles)
-            .setIssuedAt(now)
-            .setExpiration(expiryDate)
-            .signWith(secretKey)
-            .compact()
+            Jwts.builder()
+                .setSubject(userId)
+                .setId(jti)
+                .claim("churchId", churchId)
+                .claim("roles", roles.take(10)) // Limit roles to prevent token bloat
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .setIssuer("WorshipHub")
+                .signWith(secretKey, SignatureAlgorithm.HS256)
+                .compact()
+        } catch (e: Exception) {
+            throw IllegalStateException("Failed to generate JWT token", e)
+        }
     }
 
-    fun getUserIdFromToken(token: String): String {
-        return Jwts.parser()
-            .verifyWith(secretKey)
-            .build()
-            .parseSignedClaims(token)
-            .payload
-            .subject
+    override fun getUserIdFromToken(token: String): String {
+        require(token.isNotBlank()) { "Token cannot be blank" }
+        return try {
+            val claims = Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .payload
+            claims.subject ?: throw IllegalArgumentException("Token subject is null")
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Invalid token: ${e.message}")
+        }
     }
 
-    fun getChurchIdFromToken(token: String): String {
-        return Jwts.parser()
-            .verifyWith(secretKey)
-            .build()
-            .parseSignedClaims(token)
-            .payload
-            .get("churchId", String::class.java)
+    override fun getChurchIdFromToken(token: String): String {
+        require(token.isNotBlank()) { "Token cannot be blank" }
+        return try {
+            val claims = Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .payload
+            claims.get("churchId", String::class.java) 
+                ?: throw IllegalArgumentException("Church ID not found in token")
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Invalid token: ${e.message}")
+        }
     }
 
-    fun getRolesFromToken(token: String): List<String> {
-        val claims = Jwts.parser()
-            .verifyWith(secretKey)
-            .build()
-            .parseSignedClaims(token)
-            .payload
-        
-        @Suppress("UNCHECKED_CAST")
-        return claims.get("roles", List::class.java) as List<String>
+    override fun getRolesFromToken(token: String): List<String> {
+        require(token.isNotBlank()) { "Token cannot be blank" }
+        return try {
+            val claims = Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .payload
+            
+            @Suppress("UNCHECKED_CAST")
+            val roles = claims.get("roles", List::class.java) as? List<String>
+            roles ?: emptyList()
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Invalid token: ${e.message}")
+        }
     }
 
-    fun blacklistToken(token: String) {
-        val expiration = getExpirationFromToken(token)
-        if (expiration != null) {
-            blacklistedTokens[token] = expiration.time
+    override fun blacklistToken(token: String) {
+        try {
+            require(token.isNotBlank()) { "Token cannot be blank" }
+            val expiration = getExpirationFromToken(token)
+            if (expiration != null) {
+                blacklistedTokens[token] = expiration.time
+            }
+        } catch (e: Exception) {
+            // Log error but don't throw - blacklisting should be best effort
         }
     }
     
@@ -103,14 +141,28 @@ class JwtTokenProvider {
         }
     }
     
-    fun validateToken(token: String): Boolean {
+    override fun validateToken(token: String): Boolean {
+        if (token.isBlank()) return false
+        
         return try {
             if (isTokenBlacklisted(token)) return false
-            Jwts.parser()
+            
+            val claims = Jwts.parser()
                 .verifyWith(secretKey)
+                .requireIssuer("WorshipHub")
                 .build()
                 .parseSignedClaims(token)
-            true
+                .payload
+            
+            // Additional validation
+            val subject = claims.subject
+            val churchId = claims.get("churchId", String::class.java)
+            val expiration = claims.expiration
+            
+            subject != null && 
+            churchId != null && 
+            expiration != null && 
+            expiration.after(Date())
         } catch (e: Exception) {
             false
         }

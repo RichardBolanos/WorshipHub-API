@@ -3,6 +3,7 @@ plugins {
     kotlin("plugin.spring")
     id("org.springframework.boot")
     id("io.spring.dependency-management")
+    id("org.graalvm.buildtools.native") version "0.10.3"
 }
 
 java {
@@ -13,17 +14,19 @@ java {
 
 springBoot {
     mainClass.set("com.worshiphub.WorshipHubApplicationKt")
+    buildInfo()
 }
 
 kotlin {
     compilerOptions {
         freeCompilerArgs.addAll("-Xjsr305=strict")
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
     }
 }
 
 dependencyManagement {
     imports {
-        mavenBom("org.springframework.boot:spring-boot-dependencies:3.5.5")
+        mavenBom("org.springframework.boot:spring-boot-dependencies:3.3.5")
     }
 }
 
@@ -34,14 +37,17 @@ dependencies {
     
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-websocket")
+    
+
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
     implementation("io.jsonwebtoken:jjwt-api:0.12.3")
     implementation("io.jsonwebtoken:jjwt-impl:0.12.3")
     implementation("io.jsonwebtoken:jjwt-jackson:0.12.3")
@@ -49,6 +55,9 @@ dependencies {
     // Database drivers
     runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("com.h2database:h2") // Keep for testing
+    
+    // GCP Cloud SQL connector for production
+    runtimeOnly("com.google.cloud.sql:postgres-socket-factory:1.15.2")
     
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
@@ -60,3 +69,15 @@ dependencies {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+tasks.named<org.springframework.boot.gradle.tasks.bundling.BootBuildImage>("bootBuildImage") {
+    builder.set("paketobuildpacks/builder-jammy-base")
+    environment.set(mapOf(
+        "BP_JVM_VERSION" to "21",
+        "BPL_JVM_HEAD_ROOM" to "5",
+        "BPL_JVM_LOADED_CLASS_COUNT" to "35",
+        "BPL_JVM_THREAD_COUNT" to "50",
+        "JAVA_TOOL_OPTIONS" to "-XX:ReservedCodeCacheSize=32m -Xss512k"
+    ))
+}
+

@@ -30,27 +30,37 @@ class ChatController(
         @Payload message: SendChatMessageDto,
         headerAccessor: SimpMessageHeaderAccessor
     ) {
-        // TODO: Extract userId from JWT token in headers
-        val userId = UUID.randomUUID() // Placeholder
-        
-        val command = SendMessageCommand(
-            teamId = message.teamId,
-            userId = userId,
-            content = message.content
-        )
-        
-        val savedMessage = chatApplicationService.sendMessage(command)
-        
-        val response = ChatMessageResponseDto(
-            id = savedMessage.id,
-            teamId = savedMessage.teamId,
-            userId = savedMessage.userId,
-            content = savedMessage.content,
-            createdAt = savedMessage.createdAt
-        )
-        
-        // Broadcast to team channel
-        messagingTemplate.convertAndSend("/topic/team/${message.teamId}", response)
+        try {
+            // Extract userId from session attributes (set by auth interceptor)
+            val userId = headerAccessor.sessionAttributes?.get("userId") as? UUID
+                ?: throw IllegalStateException("User not authenticated")
+            
+            val command = SendMessageCommand(
+                teamId = message.teamId,
+                userId = userId,
+                content = message.content
+            )
+            
+            val savedMessage = chatApplicationService.sendMessage(command)
+            
+            val response = ChatMessageResponseDto(
+                id = savedMessage.id,
+                teamId = savedMessage.teamId,
+                userId = savedMessage.userId,
+                content = savedMessage.content,
+                createdAt = savedMessage.createdAt
+            )
+            
+            // Broadcast to team channel
+            messagingTemplate.convertAndSend("/topic/team/${message.teamId}", response)
+        } catch (e: Exception) {
+            // Send error to user
+            messagingTemplate.convertAndSendToUser(
+                headerAccessor.user?.name ?: "anonymous",
+                "/queue/errors",
+                mapOf("error" to e.message)
+            )
+        }
     }
     
     @Operation(
@@ -68,15 +78,19 @@ class ChatController(
         @Parameter(description = "Team ID", required = true) @PathVariable teamId: UUID,
         @Parameter(description = "Maximum number of messages to retrieve") @RequestParam(defaultValue = "50") limit: Int
     ): List<ChatMessageResponseDto> {
-        val messages = chatApplicationService.getTeamChatHistory(teamId, limit)
-        return messages.map { message ->
-            ChatMessageResponseDto(
-                id = message.id,
-                teamId = message.teamId,
-                userId = message.userId,
-                content = message.content,
-                createdAt = message.createdAt
-            )
+        return try {
+            val messages = chatApplicationService.getTeamChatHistory(teamId, limit)
+            messages.map { message ->
+                ChatMessageResponseDto(
+                    id = message.id,
+                    teamId = message.teamId,
+                    userId = message.userId,
+                    content = message.content,
+                    createdAt = message.createdAt
+                )
+            }
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 }

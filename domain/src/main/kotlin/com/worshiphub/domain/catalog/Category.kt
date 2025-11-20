@@ -8,6 +8,8 @@ import java.util.*
  * 
  * @property id Unique identifier for the category
  * @property name Category name (e.g., "Worship", "Joy", "Prayer")
+ * @property description Optional description of the category
+ * @property songId Reference to the song this category belongs to
  * @property churchId Reference to the church that owns this category
  */
 @Entity
@@ -20,6 +22,24 @@ data class Category(
     @Column(nullable = false, length = 50)
     val name: String,
     
+    @Column(length = 200)
+    val description: String? = null,
+    
+    @Column(nullable = false)
+    val songId: UUID,
+    
     @Column(nullable = false)
     val churchId: UUID
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Category) return false
+        return id == other.id
+    }
+
+    override fun hashCode(): Int = id.hashCode()
+
+    override fun toString(): String {
+        return "Category(id=$id, name='$name')"
+    }
+}

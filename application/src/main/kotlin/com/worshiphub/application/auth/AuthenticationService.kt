@@ -16,49 +16,61 @@ open class AuthenticationService(
 ) {
 
     fun authenticate(email: String, password: String): AuthenticationResult {
-        val user = userRepository.findByEmailAndIsActiveTrue(email)
-            ?: return AuthenticationResult.Failure("Invalid credentials")
+        return try {
+            val user = userRepository.findByEmail(email)
+                ?: return AuthenticationResult.Failure("Invalid credentials")
 
-        if (!passwordEncoder.matches(password, user.passwordHash)) {
-            return AuthenticationResult.Failure("Invalid credentials")
-        }
-        
-        if (!user.isEmailVerified) {
-            return AuthenticationResult.EmailNotVerified
-        }
+            if (!passwordEncoder.matches(password, user.passwordHash)) {
+                return AuthenticationResult.Failure("Invalid credentials")
+            }
+            
+            if (!user.isEmailVerified) {
+                return AuthenticationResult.EmailNotVerified
+            }
+            
+            if (!user.isActive) {
+                return AuthenticationResult.AccountInactive
+            }
 
-        return AuthenticationResult.Success(user)
+            AuthenticationResult.Success(user)
+        } catch (e: Exception) {
+            AuthenticationResult.Failure("Authentication failed")
+        }
     }
 
     fun register(command: RegisterUserCommand): RegisterResult {
-        if (userRepository.existsByEmail(command.email)) {
-            return RegisterResult.Failure("User with this email already exists")
-        }
-        
-        when (val validation = passwordValidator.validate(command.password)) {
-            is PasswordValidationResult.Invalid -> {
-                return RegisterResult.Failure(validation.errors.joinToString("; "))
+        return try {
+            if (userRepository.existsByEmail(command.email)) {
+                return RegisterResult.Failure("User with this email already exists")
             }
-            is PasswordValidationResult.Valid -> {
-                // Continue with registration
+            
+            when (val validation = passwordValidator.validate(command.password)) {
+                is PasswordValidationResult.Invalid -> {
+                    return RegisterResult.Failure(validation.errors.joinToString("; "))
+                }
+                is PasswordValidationResult.Valid -> {
+                    // Continue with registration
+                }
             }
+
+            val hashedPassword = passwordEncoder.encode(command.password)
+            
+            val user = User(
+                email = command.email,
+                firstName = command.firstName,
+                lastName = command.lastName,
+                passwordHash = hashedPassword,
+                churchId = command.churchId,
+                role = command.role,
+                isActive = false,
+                isEmailVerified = false
+            )
+
+            val savedUser = userRepository.save(user)
+            RegisterResult.Success(savedUser.id)
+        } catch (e: Exception) {
+            RegisterResult.Failure("Registration failed")
         }
-
-        val hashedPassword = passwordEncoder.encode(command.password)
-        
-        val user = User(
-            email = command.email,
-            firstName = command.firstName,
-            lastName = command.lastName,
-            passwordHash = hashedPassword,
-            churchId = command.churchId,
-            role = command.role,
-            isActive = false, // Requires email verification
-            isEmailVerified = false
-        )
-
-        val savedUser = userRepository.save(user)
-        return RegisterResult.Success(savedUser.id)
     }
 }
 
@@ -75,6 +87,7 @@ sealed class AuthenticationResult {
     data class Success(val user: User) : AuthenticationResult()
     data class Failure(val message: String) : AuthenticationResult()
     object EmailNotVerified : AuthenticationResult()
+    object AccountInactive : AuthenticationResult()
 }
 
 sealed class RegisterResult {

@@ -5,6 +5,6 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories
 
 @Configuration
-@EntityScan("com.worshiphub.infrastructure.persistence")
+@EntityScan("com.worshiphub.domain")
 @EnableJpaRepositories("com.worshiphub.infrastructure.repository")
 class JpaConfig

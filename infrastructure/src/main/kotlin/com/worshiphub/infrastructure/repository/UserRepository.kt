@@ -2,16 +2,15 @@ package com.worshiphub.infrastructure.repository
 
 import com.worshiphub.domain.organization.User
 import com.worshiphub.domain.organization.repository.UserRepository
-import com.worshiphub.infrastructure.persistence.UserEntity
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import java.util.*
 
-interface JpaUserRepository : JpaRepository<UserEntity, UUID> {
-    fun findByEmail(email: String): UserEntity?
-    fun findByChurchIdAndIsActiveTrue(churchId: UUID): List<UserEntity>
+interface JpaUserRepository : JpaRepository<User, UUID> {
+    fun findByEmail(email: String): User?
+    fun findByChurchIdAndIsActiveTrue(churchId: UUID): List<User>
     fun existsByEmail(email: String): Boolean
-    fun findByEmailAndIsActiveTrue(email: String): UserEntity?
+    fun findByEmailAndIsActiveTrue(email: String): User?
 }
 
 @Repository
@@ -19,28 +18,24 @@ open class UserRepositoryImpl(
     private val jpaRepository: JpaUserRepository
 ) : UserRepository {
     
-    override fun save(user: User): User {
-        val entity = UserEntity.fromDomain(user)
-        return jpaRepository.save(entity).toDomain()
-    }
+    override fun save(user: User): User = jpaRepository.save(user)
     
     override fun findById(id: UUID): User? = 
-        jpaRepository.findById(id).map { it.toDomain() }.orElse(null)
+        jpaRepository.findById(id).orElse(null)
     
     override fun findByEmail(email: String): User? = 
-        jpaRepository.findByEmail(email)?.toDomain()
+        jpaRepository.findByEmail(email)
     
     override fun findByEmailAndIsActiveTrue(email: String): User? = 
-        jpaRepository.findByEmailAndIsActiveTrue(email)?.toDomain()
+        jpaRepository.findByEmailAndIsActiveTrue(email)
     
     override fun findByChurchIdAndIsActiveTrue(churchId: UUID): List<User> = 
-        jpaRepository.findByChurchIdAndIsActiveTrue(churchId).map { it.toDomain() }
+        jpaRepository.findByChurchIdAndIsActiveTrue(churchId)
     
     override fun existsByEmail(email: String): Boolean = 
         jpaRepository.existsByEmail(email)
     
     override fun delete(user: User) {
-        val entity = UserEntity.fromDomain(user)
-        jpaRepository.delete(entity)
+        jpaRepository.deleteById(user.id)
     }
 }

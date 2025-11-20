@@ -22,7 +22,7 @@ data class AssignedMember(
     @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
     
-    @Column(nullable = false)
+    @Column(name = "service_event_id", nullable = false)
     val serviceEventId: UUID,
     
     @Column(nullable = false)
@@ -40,7 +40,64 @@ data class AssignedMember(
     
     @Column
     val respondedAt: LocalDateTime? = null
-)
+) {
+    
+    /**
+     * Accepts the service assignment.
+     */
+    fun accept(): AssignedMember {
+        require(confirmationStatus == ConfirmationStatus.PENDING) { "Can only accept pending assignments" }
+        return copy(
+            confirmationStatus = ConfirmationStatus.ACCEPTED,
+            respondedAt = LocalDateTime.now()
+        )
+    }
+    
+    /**
+     * Declines the service assignment.
+     */
+    fun decline(): AssignedMember {
+        require(confirmationStatus == ConfirmationStatus.PENDING) { "Can only decline pending assignments" }
+        return copy(
+            confirmationStatus = ConfirmationStatus.DECLINED,
+            respondedAt = LocalDateTime.now()
+        )
+    }
+    
+    /**
+     * Changes the role for this assignment.
+     */
+    fun changeRole(newRole: String): AssignedMember {
+        require(newRole.isNotBlank()) { "Role cannot be blank" }
+        return copy(role = newRole)
+    }
+    
+    /**
+     * Checks if the member has responded to the assignment.
+     */
+    fun hasResponded(): Boolean {
+        return confirmationStatus != ConfirmationStatus.PENDING
+    }
+    
+    /**
+     * Checks if the assignment is confirmed (accepted).
+     */
+    fun isConfirmed(): Boolean {
+        return confirmationStatus == ConfirmationStatus.ACCEPTED
+    }
+    
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is AssignedMember) return false
+        return id == other.id
+    }
+
+    override fun hashCode(): Int = id.hashCode()
+
+    override fun toString(): String {
+        return "AssignedMember(id=$id, userId=$userId, role='$role', status=$confirmationStatus)"
+    }
+}
 
 /**
  * Status of a member's response to a service assignment.

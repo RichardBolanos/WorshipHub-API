@@ -3,6 +3,7 @@ package com.worshiphub.api.catalog
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
+import java.util.*
 
 @Schema(description = "Request data for creating a song category or tag")
 data class CreateCategoryRequest(
@@ -15,5 +16,11 @@ data class CreateCategoryRequest(
         minLength = 1,
         maxLength = 50
     )
-    val name: String
+    val name: String,
+    
+    @Schema(
+        description = "ID of the song this category/tag belongs to",
+        required = true
+    )
+    val songId: UUID
 )

@@ -1,5 +1,6 @@
 package com.worshiphub.domain.organization
 
+import jakarta.persistence.*
 import java.time.LocalDateTime
 import java.util.*
 
@@ -17,16 +18,39 @@ import java.util.*
  * @property isEmailVerified Whether the user's email has been verified
  * @property createdAt Timestamp when the user was created
  */
+@Entity
+@Table(name = "users")
 data class User(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
+    
+    @Column(nullable = false, unique = true, length = 100)
     val email: String,
+    
+    @Column(nullable = false, length = 50)
     val firstName: String,
+    
+    @Column(nullable = false, length = 50)
     val lastName: String,
-    val passwordHash: String,
+    
+    @Column(nullable = true)
+    val passwordHash: String? = null,
+    
+    @Column(nullable = false)
     val churchId: UUID,
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     val role: UserRole,
+    
+    @Column(nullable = false)
     val isActive: Boolean = true,
+    
+    @Column(nullable = false)
     val isEmailVerified: Boolean = false,
+    
+    @Column(nullable = false)
     val createdAt: LocalDateTime = LocalDateTime.now()
 ) {
     override fun equals(other: Any?): Boolean {

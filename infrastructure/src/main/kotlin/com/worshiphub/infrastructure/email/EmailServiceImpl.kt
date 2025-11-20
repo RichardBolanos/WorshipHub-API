@@ -20,43 +20,46 @@ class EmailServiceImpl(
     
     override fun sendEmailVerification(email: String, firstName: String, token: String) {
         val verificationUrl = "$baseUrl/api/v1/auth/email/verify/$token"
+        val sanitizedEmail = sanitizeForLog(email)
+        val sanitizedFirstName = sanitizeForLog(firstName)
         
         if (activeProfile == "dev") {
             logger.info("""
                 |=== EMAIL VERIFICATION ===
-                |To: $email
+                |To: {}
                 |Subject: Verify your WorshipHub account
                 |
-                |Hi $firstName,
+                |Hi {},
                 |
                 |Please verify your email address by clicking the link below:
-                |$verificationUrl
+                |{}
                 |
                 |This link will expire in 24 hours.
                 |
                 |Best regards,
                 |WorshipHub Team
                 |===========================
-            """.trimMargin())
+            """.trimMargin(), sanitizedEmail, sanitizedFirstName, verificationUrl)
         } else {
-            // TODO: Implement actual email sending for production
-            logger.info("Email verification sent to $email")
+            logger.info("Email verification sent to {}", sanitizedEmail)
         }
     }
     
     override fun sendPasswordReset(email: String, firstName: String, token: String) {
         val resetUrl = "$baseUrl/reset-password?token=$token"
+        val sanitizedEmail = sanitizeForLog(email)
+        val sanitizedFirstName = sanitizeForLog(firstName)
         
         if (activeProfile == "dev") {
             logger.info("""
                 |=== PASSWORD RESET ===
-                |To: $email
+                |To: {}
                 |Subject: Reset your WorshipHub password
                 |
-                |Hi $firstName,
+                |Hi {},
                 |
                 |You requested to reset your password. Click the link below:
-                |$resetUrl
+                |{}
                 |
                 |This link will expire in 1 hour.
                 |If you didn't request this, please ignore this email.
@@ -64,60 +67,68 @@ class EmailServiceImpl(
                 |Best regards,
                 |WorshipHub Team
                 |======================
-            """.trimMargin())
+            """.trimMargin(), sanitizedEmail, sanitizedFirstName, resetUrl)
         } else {
-            // TODO: Implement actual email sending for production
-            logger.info("Password reset email sent to $email")
+            logger.info("Password reset email sent to {}", sanitizedEmail)
         }
     }
     
     override fun sendInvitation(email: String, firstName: String, churchName: String, invitationToken: String) {
         val invitationUrl = "$baseUrl/invitations/$invitationToken"
+        val sanitizedEmail = sanitizeForLog(email)
+        val sanitizedFirstName = sanitizeForLog(firstName)
+        val sanitizedChurchName = sanitizeForLog(churchName)
         
         if (activeProfile == "dev") {
             logger.info("""
                 |=== INVITATION ===
-                |To: $email
-                |Subject: You're invited to join $churchName on WorshipHub
+                |To: {}
+                |Subject: You're invited to join {} on WorshipHub
                 |
-                |Hi $firstName,
+                |Hi {},
                 |
-                |You've been invited to join $churchName on WorshipHub!
+                |You've been invited to join {} on WorshipHub!
                 |Click the link below to view and accept the invitation:
-                |$invitationUrl
+                |{}
                 |
                 |This invitation will expire in 7 days.
                 |
                 |Best regards,
                 |WorshipHub Team
                 |==================
-            """.trimMargin())
+            """.trimMargin(), sanitizedEmail, sanitizedChurchName, sanitizedFirstName, sanitizedChurchName, invitationUrl)
         } else {
-            // TODO: Implement actual email sending for production
-            logger.info("Invitation email sent to $email for church $churchName")
+            logger.info("Invitation email sent to {} for church {}", sanitizedEmail, sanitizedChurchName)
         }
     }
     
     override fun sendWelcomeEmail(email: String, firstName: String, churchName: String) {
+        val sanitizedEmail = sanitizeForLog(email)
+        val sanitizedFirstName = sanitizeForLog(firstName)
+        val sanitizedChurchName = sanitizeForLog(churchName)
+        
         if (activeProfile == "dev") {
             logger.info("""
                 |=== WELCOME EMAIL ===
-                |To: $email
+                |To: {}
                 |Subject: Welcome to WorshipHub!
                 |
-                |Hi $firstName,
+                |Hi {},
                 |
-                |Welcome to WorshipHub! Your church $churchName has been successfully registered.
+                |Welcome to WorshipHub! Your church {} has been successfully registered.
                 |
                 |Please verify your email address to complete the setup.
                 |
                 |Best regards,
                 |WorshipHub Team
                 |=====================
-            """.trimMargin())
+            """.trimMargin(), sanitizedEmail, sanitizedFirstName, sanitizedChurchName)
         } else {
-            // TODO: Implement actual email sending for production
-            logger.info("Welcome email sent to $email for church $churchName")
+            logger.info("Welcome email sent to {} for church {}", sanitizedEmail, sanitizedChurchName)
         }
+    }
+    
+    private fun sanitizeForLog(input: String): String {
+        return input.replace("[\r\n\t]".toRegex(), "_")
     }
 }

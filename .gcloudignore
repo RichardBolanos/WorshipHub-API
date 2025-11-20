@@ -1,0 +1,66 @@
+# This file specifies files that are *not* uploaded to Google Cloud
+# using gcloud. It follows the same syntax as .gitignore, with the addition of
+# "#!include" directives (which insert the entries of the given .gitignore-style
+# file at that point).
+
+#!include:.gitignore
+
+# Gradle build files
+.gradle/
+build/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+
+# Database files
+data/
+*.db
+*.sqlite
+
+# Test files
+**/test/
+**/*Test.kt
+**/*Tests.kt
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Scripts
+scripts/
+*.sh
+*.bat
+
+# Terraform
+terraform/
+*.tf
+*.tfstate
+*.tfstate.backup
+
+# Docker
+docker-compose.yml
+Dockerfile.dev

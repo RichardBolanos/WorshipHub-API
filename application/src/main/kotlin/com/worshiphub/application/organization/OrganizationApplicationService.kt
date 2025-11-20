@@ -16,49 +16,82 @@ import java.util.*
 open class OrganizationApplicationService {
     
     /**
+     * Gets church details by ID.
+     * 
+     * @param churchId Church identifier
+     * @return Church details
+     */
+    fun getChurch(churchId: UUID): Result<Church> {
+        return try {
+            // TODO: Fetch from repository
+            val church = Church(
+                id = churchId,
+                name = "Sample Church",
+                address = "123 Main Street, Springfield, IL 62701",
+                email = "contact@samplechurch.org"
+            )
+            Result.success(church)
+        } catch (e: Exception) {
+            Result.failure(RuntimeException("Church not found", e))
+        }
+    }
+    
+    /**
      * Registers a new church in the platform.
      * 
      * @param command Church registration command
      * @return ID of the created church
      */
-    fun registerChurch(command: RegisterChurchCommand): UUID {
-        val church = Church(
-            name = command.name,
-            address = command.address,
-            email = command.email
-        )
-        
-        // TODO: Persist through repository
-        return church.id
+    fun registerChurch(command: RegisterChurchCommand): Result<UUID> {
+        return try {
+            val church = Church(
+                name = command.name,
+                address = command.address,
+                email = command.email
+            )
+            
+            // TODO: Persist through repository
+            Result.success(church.id)
+        } catch (e: Exception) {
+            Result.failure(RuntimeException("Failed to register church", e))
+        }
     }
     
     /**
      * Creates a new worship team.
      */
-    fun createTeam(command: CreateTeamCommand): UUID {
-        val team = Team(
-            name = command.name,
-            description = command.description,
-            churchId = command.churchId,
-            leaderId = command.leaderId
-        )
-        
-        // TODO: Persist through repository
-        return team.id
+    fun createTeam(command: CreateTeamCommand): Result<UUID> {
+        return try {
+            val team = Team(
+                name = command.name,
+                description = command.description,
+                churchId = command.churchId,
+                leaderId = command.leaderId
+            )
+            
+            // TODO: Persist through repository
+            Result.success(team.id)
+        } catch (e: Exception) {
+            Result.failure(RuntimeException("Failed to create team", e))
+        }
     }
     
     /**
      * Assigns a member to a team.
      */
-    fun assignTeamMember(command: AssignTeamMemberCommand): UUID {
-        val teamMember = TeamMember(
-            teamId = command.teamId,
-            userId = command.userId,
-            teamRole = command.teamRole
-        )
-        
-        // TODO: Persist through repository
-        return teamMember.id
+    fun assignTeamMember(command: AssignTeamMemberCommand): Result<UUID> {
+        return try {
+            val teamMember = TeamMember(
+                teamId = command.teamId,
+                userId = command.userId,
+                teamRole = command.teamRole
+            )
+            
+            // TODO: Persist through repository
+            Result.success(teamMember.id)
+        } catch (e: Exception) {
+            Result.failure(RuntimeException("Failed to assign team member", e))
+        }
     }
     
     /**
@@ -71,9 +104,13 @@ open class OrganizationApplicationService {
     /**
      * Gets team members.
      */
-    fun getTeamMembers(teamId: UUID): List<TeamMember> {
-        // TODO: Fetch from repository
-        return emptyList()
+    fun getTeamMembers(teamId: UUID): Result<List<TeamMember>> {
+        return try {
+            // TODO: Fetch from repository
+            Result.success(emptyList())
+        } catch (e: Exception) {
+            Result.failure(RuntimeException("Failed to get team members", e))
+        }
     }
     
     /**

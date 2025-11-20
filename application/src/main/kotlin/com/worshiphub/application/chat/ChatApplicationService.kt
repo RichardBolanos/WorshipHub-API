@@ -1,6 +1,7 @@
 package com.worshiphub.application.chat
 
 import com.worshiphub.domain.collaboration.ChatMessage
+import com.worshiphub.domain.collaboration.repository.ChatMessageRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
@@ -10,7 +11,9 @@ import java.util.*
  */
 @Service
 @Transactional
-open class ChatApplicationService {
+open class ChatApplicationService(
+    private val chatMessageRepository: ChatMessageRepository
+) {
     
     /**
      * Sends a message to a team chat.
@@ -22,15 +25,13 @@ open class ChatApplicationService {
             content = command.content
         )
         
-        // TODO: Persist through repository
-        return message
+        return chatMessageRepository.save(message)
     }
     
     /**
      * Gets chat history for a team.
      */
     fun getTeamChatHistory(teamId: UUID, limit: Int = 50): List<ChatMessage> {
-        // TODO: Fetch from repository with pagination
-        return emptyList()
+        return chatMessageRepository.findByTeamIdOrderByCreatedAtDesc(teamId, limit)
     }
 }

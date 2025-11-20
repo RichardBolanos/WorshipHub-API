@@ -2,11 +2,12 @@ package com.worshiphub.api.organization
 
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Size
+import java.util.*
 
 @Schema(description = "User profile information response")
 data class UserProfileResponse(
     @Schema(description = "User unique identifier", example = "123e4567-e89b-12d3-a456-426614174000")
-    val id: String,
+    val id: UUID,
     
     @Schema(description = "User email address", example = "john.doe@church.com")
     val email: String,
@@ -21,13 +22,13 @@ data class UserProfileResponse(
     val role: String,
     
     @Schema(description = "Church ID the user belongs to", example = "987fcdeb-51a2-43d1-9c4e-123456789abc")
-    val churchId: String,
+    val churchId: UUID,
     
-    @Schema(description = "Whether the user account is active", example = "true")
-    val isActive: Boolean,
+    @Schema(description = "Whether email is verified", example = "true")
+    val isEmailVerified: Boolean,
     
-    @Schema(description = "Account creation timestamp", example = "2024-01-01T10:00:00")
-    val createdAt: String
+    @Schema(description = "Whether user has set a password", example = "false")
+    val hasPassword: Boolean
 )
 
 @Schema(description = "Request data for updating user profile")

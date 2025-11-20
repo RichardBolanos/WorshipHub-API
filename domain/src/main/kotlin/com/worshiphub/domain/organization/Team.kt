@@ -35,4 +35,16 @@ data class Team(
     
     @Column(nullable = false)
     val createdAt: LocalDateTime = LocalDateTime.now()
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Team) return false
+        return id == other.id
+    }
+
+    override fun hashCode(): Int = id.hashCode()
+
+    override fun toString(): String {
+        return "Team(id=$id, name='$name', churchId=$churchId)"
+    }
+}

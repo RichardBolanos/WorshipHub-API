@@ -24,13 +24,24 @@ class InvitationService(
     private val churchRepository: ChurchRepository,
     private val emailService: EmailService,
     private val passwordEncoder: PasswordEncoder,
-    private val passwordValidator: PasswordValidator
+    private val passwordValidator: PasswordValidator,
+    private val rateLimitService: InvitationRateLimitService
 ) {
     
     /**
      * Sends an invitation to join a church.
      */
     fun sendInvitation(command: SendInvitationCommand): InvitationResult {
+        // Validate email domain
+        if (!rateLimitService.isValidEmailDomain(command.email)) {
+            return InvitationResult.InvalidEmailDomain
+        }
+        
+        // Check rate limiting
+        if (!rateLimitService.canSendInvitation(command.invitedBy)) {
+            return InvitationResult.RateLimitExceeded
+        }
+        
         // Check if user already exists
         if (userRepository.existsByEmail(command.email)) {
             return InvitationResult.UserAlreadyExists
@@ -64,6 +75,9 @@ class InvitationService(
         )
         
         invitationTokenRepository.save(invitation)
+        
+        // Record invitation sent for rate limiting
+        rateLimitService.recordInvitationSent(command.invitedBy)
         
         // Send invitation email
         emailService.sendInvitation(
@@ -187,6 +201,8 @@ sealed class InvitationResult {
     object InvalidToken : InvitationResult()
     object InvitationExpired : InvitationResult()
     object InvitationAlreadyUsed : InvitationResult()
+    object RateLimitExceeded : InvitationResult()
+    object InvalidEmailDomain : InvitationResult()
     data class InvalidPassword(val errors: List<String>) : InvitationResult()
 }
 

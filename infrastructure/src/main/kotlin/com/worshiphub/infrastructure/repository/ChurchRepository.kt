@@ -2,13 +2,13 @@ package com.worshiphub.infrastructure.repository
 
 import com.worshiphub.domain.organization.Church
 import com.worshiphub.domain.organization.repository.ChurchRepository
-import com.worshiphub.infrastructure.persistence.ChurchEntity
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import java.util.*
+import org.slf4j.LoggerFactory
 
-interface JpaChurchRepository : JpaRepository<ChurchEntity, UUID> {
-    fun findByEmail(email: String): ChurchEntity?
+interface JpaChurchRepository : JpaRepository<Church, UUID> {
+    fun findByEmail(email: String): Church?
     fun existsByEmail(email: String): Boolean
 }
 
@@ -17,22 +17,23 @@ open class ChurchRepositoryImpl(
     private val jpaRepository: JpaChurchRepository
 ) : ChurchRepository {
     
+    private val logger = LoggerFactory.getLogger(ChurchRepositoryImpl::class.java)
+    
     override fun save(church: Church): Church {
-        val entity = ChurchEntity.fromDomain(church)
-        return jpaRepository.save(entity).toDomain()
+        logger.info("Saving church: name=${church.name}, email=${church.email}")
+        return jpaRepository.save(church)
     }
     
     override fun findById(id: UUID): Church? = 
-        jpaRepository.findById(id).map { it.toDomain() }.orElse(null)
+        jpaRepository.findById(id).orElse(null)
     
     override fun findByEmail(email: String): Church? = 
-        jpaRepository.findByEmail(email)?.toDomain()
+        jpaRepository.findByEmail(email)
     
     override fun existsByEmail(email: String): Boolean = 
         jpaRepository.existsByEmail(email)
     
     override fun delete(church: Church) {
-        val entity = ChurchEntity.fromDomain(church)
-        jpaRepository.delete(entity)
+        jpaRepository.deleteById(church.id)
     }
 }

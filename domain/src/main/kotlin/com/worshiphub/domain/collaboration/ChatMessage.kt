@@ -5,7 +5,7 @@ import java.time.LocalDateTime
 import java.util.*
 
 /**
- * ChatMessage entity for team chat messages.
+ * ChatMessage domain entity for team chat messages.
  * 
  * @property id Unique identifier for the message
  * @property teamId Reference to the team
@@ -26,7 +26,7 @@ data class ChatMessage(
     @Column(nullable = false)
     val userId: UUID,
     
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false, length = 1000)
     val content: String,
     
     @Column(nullable = false)

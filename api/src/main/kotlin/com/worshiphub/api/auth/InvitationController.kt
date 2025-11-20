@@ -74,6 +74,14 @@ class InvitationController(
                 ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                     InvitationResponse(message = "Insufficient permissions to send invitations")
                 )
+            is InvitationResult.RateLimitExceeded -> 
+                ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(
+                    InvitationResponse(message = "Daily invitation limit exceeded. Try again tomorrow.")
+                )
+            is InvitationResult.InvalidEmailDomain -> 
+                ResponseEntity.badRequest().body(
+                    InvitationResponse(message = "Email domain not allowed. Please use a valid email address.")
+                )
             else -> ResponseEntity.badRequest().body(
                 InvitationResponse(message = "Failed to send invitation")
             )

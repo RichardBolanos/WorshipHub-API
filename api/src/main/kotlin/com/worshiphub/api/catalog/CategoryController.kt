@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
 import java.util.*
 
@@ -31,12 +32,14 @@ class CategoryController(
     ])
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('WORSHIP_LEADER') or hasRole('CHURCH_ADMIN')")
     fun createCategory(
         @Valid @RequestBody request: CreateCategoryRequest,
         @Parameter(description = "Church ID", required = true) @RequestHeader("Church-Id") churchId: UUID
     ): Map<String, UUID> {
         val command = CreateCategoryCommand(
             name = request.name,
+            songId = request.songId,
             churchId = churchId
         )
         
@@ -56,11 +59,12 @@ class CategoryController(
     ])
     @PostMapping("/tags")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('WORSHIP_LEADER') or hasRole('CHURCH_ADMIN')")
     fun createTag(
         @Valid @RequestBody request: CreateCategoryRequest,
         @Parameter(description = "Church ID", required = true) @RequestHeader("Church-Id") churchId: UUID
     ): Map<String, UUID> {
-        val tagId = catalogApplicationService.createTag(request.name, churchId)
+        val tagId = catalogApplicationService.createTag(request.name, request.songId, churchId)
         return mapOf("tagId" to tagId)
     }
 }

@@ -1,0 +1,81 @@
+substitutions:
+  _CACHE_BUCKET: 'gs://worshiphub-478318_cloudbuild/cache'
+
+steps:
+  # Restaurar caché de Gradle
+  - name: 'gcr.io/cloud-builders/gsutil'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gsutil -m rsync -r ${_CACHE_BUCKET}/gradle /root/.gradle || true
+    volumes:
+      - name: 'gradle_cache'
+        path: '/root/.gradle'
+
+  # Compilar imagen nativa
+  - name: 'gradle:8.5-jdk21'
+    entrypoint: 'gradle'
+    args:
+      - 'bootBuildImage'
+      - '--imageName=us-central1-docker.pkg.dev/worshiphub-478318/worshiphub-repo/worshiphub-api:latest'
+      - '-Dspring.boot.build-image.cache.image=us-central1-docker.pkg.dev/worshiphub-478318/worshiphub-repo/worshiphub-api.cache:latest'
+    timeout: '1800s'
+    volumes:
+      - name: 'gradle_cache'
+        path: '/root/.gradle'
+
+  # Guardar caché de Gradle
+  - name: 'gcr.io/cloud-builders/gsutil'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gsutil -m rsync -r /root/.gradle ${_CACHE_BUCKET}/gradle
+    volumes:
+      - name: 'gradle_cache'
+        path: '/root/.gradle'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/worshiphub-478318/worshiphub-repo/worshiphub-api:latest'
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'worshiphub-api'
+      - '--image'
+      - 'us-central1-docker.pkg.dev/worshiphub-478318/worshiphub-repo/worshiphub-api:latest'
+      - '--region'
+      - 'us-central1'
+      - '--allow-unauthenticated'
+      - '--port'
+      - '8080'
+      - '--memory'
+      - '1Gi'
+      - '--cpu'
+      - '1'
+      - '--concurrency'
+      - '80'
+      - '--min-instances'
+      - '0'
+      - '--max-instances'
+      - '1'
+      - '--timeout'
+      - '900'
+
+      - '--cpu-throttling'
+      - '--execution-environment'
+      - 'gen2'
+
+      - '--set-env-vars'
+      - 'FLYWAY_ENABLED=true,DDL_AUTO=validate,SPRING_PROFILES_ACTIVE=dev,DATABASE_URL=jdbc:postgresql://ep-falling-sun-a4hskmu4-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require,DATABASE_USERNAME=neondb_owner,DATABASE_PASSWORD=npg_wDurt4e8OMRB'
+
+images:
+  - 'us-central1-docker.pkg.dev/worshiphub-478318/worshiphub-repo/worshiphub-api'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

@@ -32,10 +32,10 @@ class EmailVerificationService(
             return EmailVerificationResult.AlreadyVerified
         }
         
-        // Invalidate existing tokens
+        // Invalidate existing tokens first
         emailVerificationTokenRepository.invalidateAllTokensForUser(userId)
         
-        // Generate new token
+        // Generate new token - let database assign ID
         val token = EmailVerificationToken(
             userId = userId,
             token = TokenGenerationService.generateEmailVerificationToken(),
@@ -43,10 +43,10 @@ class EmailVerificationService(
             expiresAt = LocalDateTime.now().plusHours(24) // 24 hours expiration
         )
         
-        emailVerificationTokenRepository.save(token)
+        val savedToken = emailVerificationTokenRepository.save(token)
         
         // Send email
-        emailService.sendEmailVerification(user.email, user.firstName, token.token)
+        emailService.sendEmailVerification(user.email, user.firstName, savedToken.token)
         
         return EmailVerificationResult.Success
     }

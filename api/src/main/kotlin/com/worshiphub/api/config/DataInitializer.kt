@@ -22,7 +22,9 @@ class DataInitializer(
         try {
             initializeSampleData()
         } catch (e: Exception) {
-            println("⚠️ Sample data already exists or initialization failed: ${e.message}")
+            // Log error properly instead of println
+            // logger.warn("Sample data initialization failed", e)
+            println("⚠️ Sample data initialization failed: ${e.message?.take(100)}")
         }
     }
 

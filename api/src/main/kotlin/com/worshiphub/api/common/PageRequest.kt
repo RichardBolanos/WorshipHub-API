@@ -12,7 +12,13 @@ data class PageRequest(
     val size: Int = 20,
     
     val sort: String? = null
-)
+) {
+    init {
+        require(page >= 0) { "Page number must be non-negative" }
+        require(size in 1..100) { "Page size must be between 1 and 100" }
+        sort?.let { require(it.length <= 50) { "Sort parameter too long" } }
+    }
+}
 
 data class PageResponse<T>(
     val content: List<T>,

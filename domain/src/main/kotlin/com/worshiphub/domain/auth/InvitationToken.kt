@@ -1,6 +1,7 @@
 package com.worshiphub.domain.auth
 
 import com.worshiphub.domain.organization.UserRole
+import jakarta.persistence.*
 import java.time.LocalDateTime
 import java.util.*
 
@@ -19,17 +20,42 @@ import java.util.*
  * @property isUsed Whether the invitation has been accepted
  * @property createdAt Invitation creation timestamp
  */
+@Entity
+@Table(name = "invitation_tokens")
 data class InvitationToken(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
+    
+    @Column(nullable = false, unique = true)
     val token: String,
+    
+    @Column(nullable = false)
     val email: String,
+    
+    @Column(nullable = false)
     val firstName: String,
+    
+    @Column(nullable = false)
     val lastName: String,
+    
+    @Column(nullable = false)
     val churchId: UUID,
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     val role: UserRole,
+    
+    @Column(nullable = false)
     val invitedBy: UUID,
+    
+    @Column(nullable = false)
     val expiresAt: LocalDateTime,
+    
+    @Column(nullable = false)
     val isUsed: Boolean = false,
+    
+    @Column(nullable = false)
     val createdAt: LocalDateTime = LocalDateTime.now()
 ) {
     companion object {
