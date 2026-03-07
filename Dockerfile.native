@@ -1,0 +1,27 @@
+FROM ubuntu:22.04
+
+# Instalar dependencias mínimas
+RUN apt-get update && \
+    apt-get install -y ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# Crear usuario no-root
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Crear directorio de trabajo
+WORKDIR /app
+
+# Copiar ejecutable nativo
+COPY api/build/native/nativeCompile/* /app/
+RUN mv /app/* /app/worshiphub-api 2>/dev/null || true && \
+    chmod +x /app/worshiphub-api && \
+    chown appuser:appuser /app/worshiphub-api
+
+# Cambiar a usuario no-root
+USER appuser
+
+# Exponer puerto
+EXPOSE 8080
+
+# Comando de inicio
+ENTRYPOINT ["/app/worshiphub-api"]

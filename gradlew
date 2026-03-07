@@ -236,7 +236,7 @@ parseArgs ()
         shift
         case $arg in                                #(
           --*=*)   set -- "$@" "$arg" ;;            #(
-          --*)     set -- "$@" "$arg" "$1" ; shift #(
+          --*)     set -- "$@" "$arg" "$1" ; shift ;; #(
           -*)      set -- "$@" "$arg" ;;            #(
           *)       set -- "$@" "$arg" ;;
         esac

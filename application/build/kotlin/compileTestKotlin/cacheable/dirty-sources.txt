@@ -1,4 +1,0 @@
-D:\Proyectos\WorshipHub\Backend\application\src\test\kotlin\com\worshiphub\application\scheduling\SchedulingApplicationServiceTest.kt
-D:\Proyectos\WorshipHub\Backend\application\src\test\kotlin\com\worshiphub\application\catalog\CatalogApplicationServiceTest.kt
-D:\Proyectos\WorshipHub\Backend\application\src\test\kotlin\com\worshiphub\application\auth\AuthenticationServiceTest.kt
-D:\Proyectos\WorshipHub\Backend\application\src\test\kotlin\com\worshiphub\application\organization\OrganizationApplicationServiceTest.kt

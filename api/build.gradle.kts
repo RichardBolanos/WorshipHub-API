@@ -52,6 +52,9 @@ dependencies {
     implementation("io.jsonwebtoken:jjwt-impl:0.12.3")
     implementation("io.jsonwebtoken:jjwt-jackson:0.12.3")
     
+    // Development tools
+    developmentOnly("org.springframework.boot:spring-boot-devtools")
+    
     // Database drivers
     runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("com.h2database:h2") // Keep for testing
@@ -79,5 +82,25 @@ tasks.named<org.springframework.boot.gradle.tasks.bundling.BootBuildImage>("boot
         "BPL_JVM_THREAD_COUNT" to "50",
         "JAVA_TOOL_OPTIONS" to "-XX:ReservedCodeCacheSize=32m -Xss512k"
     ))
+}
+
+// Configuración para compilación nativa con GraalVM
+graalvmNative {
+    binaries {
+        named("main") {
+            buildArgs.add("--initialize-at-build-time=org.slf4j")
+            buildArgs.add("-H:+ReportExceptionStackTraces")
+            buildArgs.add("-H:+AddAllCharsets")
+            buildArgs.add("-H:IncludeResourceBundles=messages")
+            buildArgs.add("--enable-url-protocols=http,https")
+            buildArgs.add("--allow-incomplete-classpath")
+            buildArgs.add("-H:+UnlockExperimentalVMOptions")
+            buildArgs.add("-H:+UseServiceLoaderFeature")
+            
+            // Optimizaciones para Spring Boot
+            buildArgs.add("--initialize-at-build-time=org.springframework.util.unit.DataSize")
+            buildArgs.add("--initialize-at-build-time=org.springframework.boot.logging.LoggingSystem")
+        }
+    }
 }
 

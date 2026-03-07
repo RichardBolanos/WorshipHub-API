@@ -1,0 +1,113 @@
+========================================
+WORSHIPHUB API - VALID MUSICAL KEYS
+========================================
+
+REGEX PATTERN:
+^[A-G][#b]?(m|maj|min|sus2|sus4|add9|7|maj7|min7|dim|aug)?$
+
+========================================
+COMPLETE LIST OF VALID KEYS
+========================================
+
+MAJOR KEYS (Natural):
+C, D, E, F, G, A, B
+
+MAJOR KEYS (Sharp):
+C#, D#, F#, G#, A#
+
+MAJOR KEYS (Flat):
+Db, Eb, Gb, Ab, Bb
+
+MAJOR KEYS (Explicit):
+Cmaj, Dmaj, Emaj, Fmaj, Gmaj, Amaj, Bmaj
+C#maj, D#maj, F#maj, G#maj, A#maj
+Dbmaj, Ebmaj, Gbmaj, Abmaj, Bbmaj
+
+MINOR KEYS (Natural):
+Cm, Dm, Em, Fm, Gm, Am, Bm
+
+MINOR KEYS (Sharp):
+C#m, D#m, F#m, G#m, A#m
+
+MINOR KEYS (Flat):
+Dbm, Ebm, Gbm, Abm, Bbm
+
+MINOR KEYS (Explicit):
+Cmin, Dmin, Emin, Fmin, Gmin, Amin, Bmin
+C#min, D#min, F#min, G#min, A#min
+Dbmin, Ebmin, Gbmin, Abmin, Bbmin
+
+SEVENTH CHORDS:
+C7, D7, E7, F7, G7, A7, B7
+C#7, D#7, F#7, G#7, A#7
+Db7, Eb7, Gb7, Ab7, Bb7
+
+MAJOR SEVENTH CHORDS:
+Cmaj7, Dmaj7, Emaj7, Fmaj7, Gmaj7, Amaj7, Bmaj7
+C#maj7, D#maj7, F#maj7, G#maj7, A#maj7
+Dbmaj7, Ebmaj7, Gbmaj7, Abmaj7, Bbmaj7
+
+MINOR SEVENTH CHORDS:
+Cmin7, Dmin7, Emin7, Fmin7, Gmin7, Amin7, Bmin7
+C#min7, D#min7, F#min7, G#min7, A#min7
+Dbmin7, Ebmin7, Gbmin7, Abmin7, Bbmin7
+
+SUSPENDED CHORDS (sus2):
+Csus2, Dsus2, Esus2, Fsus2, Gsus2, Asus2, Bsus2
+C#sus2, D#sus2, F#sus2, G#sus2, A#sus2
+Dbsus2, Ebsus2, Gbsus2, Absus2, Bbsus2
+
+SUSPENDED CHORDS (sus4):
+Csus4, Dsus4, Esus4, Fsus4, Gsus4, Asus4, Bsus4
+C#sus4, D#sus4, F#sus4, G#sus4, A#sus4
+Dbsus4, Ebsus4, Gbsus4, Absus4, Bbsus4
+
+ADDED NINTH CHORDS:
+Cadd9, Dadd9, Eadd9, Fadd9, Gadd9, Aadd9, Badd9
+C#add9, D#add9, F#add9, G#add9, A#add9
+Dbadd9, Ebadd9, Gbadd9, Abadd9, Bbadd9
+
+DIMINISHED CHORDS:
+Cdim, Ddim, Edim, Fdim, Gdim, Adim, Bdim
+C#dim, D#dim, F#dim, G#dim, A#dim
+Dbdim, Ebdim, Gbdim, Abdim, Bbdim
+
+AUGMENTED CHORDS:
+Caug, Daug, Eaug, Faug, Gaug, Aaug, Baug
+C#aug, D#aug, F#aug, G#aug, A#aug
+Dbaug, Ebaug, Gbaug, Abaug, Bbaug
+
+========================================
+EXAMPLES OF VALID KEYS:
+========================================
+C       - C major
+G       - G major
+Am      - A minor
+F#      - F sharp major
+Bb      - B flat major
+Ebm     - E flat minor
+Gmaj    - G major (explicit)
+Dmin    - D minor (explicit)
+C#m     - C sharp minor
+Abmaj   - A flat major
+G7      - G dominant seventh
+Cmaj7   - C major seventh
+Amin7   - A minor seventh
+F#7     - F sharp dominant seventh
+Dsus4   - D suspended fourth
+Asus2   - A suspended second
+Gadd9   - G added ninth
+Bdim    - B diminished
+C#aug   - C sharp augmented
+
+========================================
+INVALID EXAMPLES:
+========================================
+H       - Invalid note (only A-G)
+C##     - Double sharp not allowed
+Cbb     - Double flat not allowed
+c       - Lowercase not allowed
+CM      - Uppercase M not allowed
+Cma     - Invalid modifier
+C9      - 9 alone not allowed (use add9)
+Cmaj9   - maj9 not in pattern
