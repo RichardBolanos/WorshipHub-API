@@ -24,7 +24,10 @@ data class Setlist(
     @Column(nullable = false, length = 100)
     val name: String,
     
-    @ElementCollection
+    @Column(length = 500)
+    val description: String? = null,
+    
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "setlist_songs", joinColumns = [JoinColumn(name = "setlist_id")])
     @OrderColumn(name = "song_order")
     @Column(name = "song_id")
@@ -33,11 +36,17 @@ data class Setlist(
     @Column
     val estimatedDuration: Int? = null,
     
+    @Column
+    val eventDate: LocalDateTime? = null,
+    
     @Column(nullable = false)
     val churchId: UUID,
     
     @Column(nullable = false)
-    val createdAt: LocalDateTime = LocalDateTime.now()
+    val createdAt: LocalDateTime = LocalDateTime.now(),
+    
+    @Column(nullable = false)
+    val updatedAt: LocalDateTime = LocalDateTime.now()
 ) {
     
     /**
