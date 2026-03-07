@@ -22,4 +22,8 @@ open class SetlistRepositoryImpl(
     override fun findByChurchId(churchId: UUID): List<Setlist> = jpaRepository.findByChurchId(churchId)
     
     override fun delete(setlist: Setlist) = jpaRepository.delete(setlist)
+    
+    override fun delete(id: UUID) {
+        jpaRepository.deleteById(id)
+    }
 }

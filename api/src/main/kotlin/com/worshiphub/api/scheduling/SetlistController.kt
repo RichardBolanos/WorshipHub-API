@@ -61,16 +61,74 @@ class SetlistController(
     @PreAuthorize("hasRole('TEAM_MEMBER') or hasRole('WORSHIP_LEADER') or hasRole('CHURCH_ADMIN')")
     fun getSetlists(
         @Parameter(description = "Church ID", required = true) @RequestHeader("Church-Id") churchId: UUID
-    ): List<Map<String, Any>> {
-        // TODO: Implement setlist retrieval
-        return listOf(
-            mapOf(
-                "id" to UUID.randomUUID(),
-                "name" to "Sunday Morning Worship",
-                "songCount" to 5,
-                "totalDuration" to 25
-            )
+    ): Map<String, Any> {
+        val setlists = schedulingApplicationService.getAllSetlists(churchId)
+        return mapOf(
+            "content" to setlists.map { setlist ->
+                mapOf(
+                    "id" to setlist.id,
+                    "name" to setlist.name,
+                    "description" to setlist.description,
+                    "songIds" to setlist.songIds,
+                    "estimatedDuration" to setlist.estimatedDuration,
+                    "eventDate" to setlist.eventDate,
+                    "createdAt" to setlist.createdAt,
+                    "updatedAt" to setlist.updatedAt
+                )
+            }
         )
+    }
+    
+    @Operation(
+        summary = "Get setlist by ID",
+        description = "Retrieves a specific setlist"
+    )
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('TEAM_MEMBER') or hasRole('WORSHIP_LEADER') or hasRole('CHURCH_ADMIN')")
+    fun getSetlistById(
+        @PathVariable id: UUID,
+        @Parameter(description = "Church ID", required = true) @RequestHeader("Church-Id") churchId: UUID
+    ): Map<String, Any> {
+        val setlist = schedulingApplicationService.getSetlistById(id, churchId)
+        return mapOf(
+            "id" to setlist.id,
+            "name" to setlist.name,
+            "description" to setlist.description,
+            "songIds" to setlist.songIds,
+            "estimatedDuration" to setlist.estimatedDuration,
+            "eventDate" to setlist.eventDate,
+            "createdAt" to setlist.createdAt,
+            "updatedAt" to setlist.updatedAt
+        )
+    }
+    
+    @Operation(
+        summary = "Update setlist",
+        description = "Updates an existing setlist"
+    )
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('WORSHIP_LEADER') or hasRole('CHURCH_ADMIN')")
+    fun updateSetlist(
+        @PathVariable id: UUID,
+        @Valid @RequestBody request: UpdateSetlistRequest,
+        @Parameter(description = "Church ID", required = true) @RequestHeader("Church-Id") churchId: UUID
+    ): Map<String, String> {
+        schedulingApplicationService.updateSetlist(id, request.name, request.description, request.songIds, request.estimatedDuration, churchId)
+        return mapOf("message" to "Setlist updated successfully")
+    }
+    
+    @Operation(
+        summary = "Delete setlist",
+        description = "Deletes a setlist"
+    )
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('WORSHIP_LEADER') or hasRole('CHURCH_ADMIN')")
+    fun deleteSetlist(
+        @PathVariable id: UUID,
+        @Parameter(description = "Church ID", required = true) @RequestHeader("Church-Id") churchId: UUID
+    ) {
+        schedulingApplicationService.deleteSetlist(id, churchId)
     }
     
     @Operation(
@@ -113,4 +171,11 @@ class SetlistController(
 data class AddSongToSetlistRequest(
     val songId: UUID,
     val position: Int? = null
+)
+
+data class UpdateSetlistRequest(
+    val name: String,
+    val description: String?,
+    val songIds: List<UUID>,
+    val estimatedDuration: Double
 )

@@ -12,4 +12,5 @@ interface SetlistRepository {
     fun findById(id: UUID): Setlist?
     fun findByChurchId(churchId: UUID): List<Setlist>
     fun delete(setlist: Setlist)
+    fun delete(id: UUID)
 }

@@ -279,4 +279,48 @@ open class SchedulingApplicationService(
             "totalDuration" to calculateSetlistDuration(setlistId)
         )
     }
+    
+    fun getAllSetlists(churchId: UUID): List<com.worshiphub.domain.scheduling.Setlist> {
+        return setlistRepository.findByChurchId(churchId)
+    }
+    
+    fun getSetlistById(id: UUID, churchId: UUID): com.worshiphub.domain.scheduling.Setlist {
+        val setlist = setlistRepository.findById(id)
+            ?: throw IllegalArgumentException("Setlist not found: $id")
+        
+        if (setlist.churchId != churchId) {
+            throw IllegalArgumentException("Setlist does not belong to this church")
+        }
+        
+        return setlist
+    }
+    
+    fun updateSetlist(id: UUID, name: String, description: String?, songIds: List<UUID>, estimatedDuration: Double, churchId: UUID) {
+        val setlist = setlistRepository.findById(id)
+            ?: throw IllegalArgumentException("Setlist not found: $id")
+        
+        if (setlist.churchId != churchId) {
+            throw IllegalArgumentException("Setlist does not belong to this church")
+        }
+        
+        val updatedSetlist = setlist.copy(
+            name = name,
+            description = description,
+            songIds = songIds,
+            estimatedDuration = estimatedDuration.toInt()
+        )
+        
+        setlistRepository.save(updatedSetlist)
+    }
+    
+    fun deleteSetlist(id: UUID, churchId: UUID) {
+        val setlist = setlistRepository.findById(id)
+            ?: throw IllegalArgumentException("Setlist not found: $id")
+        
+        if (setlist.churchId != churchId) {
+            throw IllegalArgumentException("Setlist does not belong to this church")
+        }
+        
+        setlistRepository.delete(id)
+    }
 }
