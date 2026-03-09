@@ -24,7 +24,7 @@ class HealthController {
             "status" to "UP",
             "timestamp" to LocalDateTime.now(),
             "service" to "WorshipHub API",
-            "version" to "1.0.1",
+            "version" to "1.0.2",
             "environment" to "production"
         )
     }
