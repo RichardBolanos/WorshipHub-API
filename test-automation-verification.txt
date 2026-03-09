@@ -1,0 +1,2 @@
+Verificación de automatización n8n - Timestamp: 2026-03-08 21:17:00
+Este archivo fue creado para verificar el funcionamiento de la automatización.
