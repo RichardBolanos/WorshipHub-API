@@ -162,21 +162,66 @@ open class CatalogApplicationService(
 
     /** Creates a new category. */
     @Transactional
-    fun createCategory(command: CreateCategoryCommand): UUID {
-        val category =
-                Category(name = command.name, songId = command.songId, churchId = command.churchId)
-
-        val savedCategory = categoryRepository.save(category)
-        return savedCategory.id
+    fun createCategory(category: Category): Category {
+        return categoryRepository.save(category)
+    }
+    
+    /** Gets all categories for a church. */
+    fun getAllCategories(churchId: UUID): List<Category> {
+        return categoryRepository.findByChurchId(churchId)
+    }
+    
+    /** Updates a category. */
+    @Transactional
+    fun updateCategory(category: Category): Category {
+        return categoryRepository.save(category)
+    }
+    
+    /** Deletes a category. */
+    @Transactional
+    fun deleteCategory(categoryId: UUID) {
+        categoryRepository.findById(categoryId)?.let { categoryRepository.delete(it) }
     }
 
     /** Creates a new tag. */
     @Transactional
-    fun createTag(name: String, songId: UUID, churchId: UUID): UUID {
-        val tag = Tag(name = name, songId = songId, churchId = churchId)
-
-        val savedTag = tagRepository.save(tag)
-        return savedTag.id
+    fun createTag(tag: Tag): Tag {
+        return tagRepository.save(tag)
+    }
+    
+    /** Gets all tags for a church. */
+    fun getAllTags(churchId: UUID): List<Tag> {
+        return tagRepository.findByChurchId(churchId)
+    }
+    
+    /** Updates a tag. */
+    @Transactional
+    fun updateTag(tag: Tag): Tag {
+        return tagRepository.save(tag)
+    }
+    
+    /** Deletes a tag. */
+    @Transactional
+    fun deleteTag(tagId: UUID) {
+        tagRepository.findById(tagId)?.let { tagRepository.delete(it) }
+    }
+    
+    /** Assigns categories to a song. */
+    @Transactional
+    fun assignCategoriesToSong(songId: UUID, categoryIds: List<UUID>) {
+        val song = songRepository.findById(songId) ?: throw IllegalArgumentException("Song not found")
+        val categories = categoryIds.mapNotNull { categoryRepository.findById(it) }
+        val updated = song.copy(categories = categories)
+        songRepository.save(updated)
+    }
+    
+    /** Assigns tags to a song. */
+    @Transactional
+    fun assignTagsToSong(songId: UUID, tagIds: List<UUID>) {
+        val song = songRepository.findById(songId) ?: throw IllegalArgumentException("Song not found")
+        val tags = tagIds.mapNotNull { tagRepository.findById(it) }
+        val updated = song.copy(tags = tags)
+        songRepository.save(updated)
     }
 
     /** Adds an attachment to a song. */

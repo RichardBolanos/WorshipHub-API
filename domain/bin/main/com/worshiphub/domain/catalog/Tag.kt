@@ -9,7 +9,6 @@ import java.util.*
  * @property id Unique identifier for the tag
  * @property name Tag name (e.g., "Christmas", "Communion", "Easter")
  * @property color Optional color for visual organization
- * @property songId Reference to the song this tag belongs to
  * @property churchId Reference to the church that owns this tag
  */
 @Entity
@@ -24,9 +23,6 @@ data class Tag(
     
     @Column(length = 7) // Hex color code
     val color: String? = null,
-    
-    @Column(nullable = false)
-    val songId: UUID,
     
     @Column(nullable = false)
     val churchId: UUID

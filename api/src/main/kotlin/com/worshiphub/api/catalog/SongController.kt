@@ -101,6 +101,8 @@ class SongController(
                                 bpm = song.bpm,
                                 chords = song.chords,
                                 lyrics = song.lyrics,
+                                categories = song.categories.map { CategoryResponse(it.id, it.name, it.description) },
+                                tags = song.tags.map { TagResponse(it.id, it.name, it.color) },
                                 createdAt = song.createdAt
                         )
                 } else {
@@ -198,6 +200,8 @@ class SongController(
                                         bpm = song.bpm,
                                         chords = song.chords,
                                         lyrics = song.lyrics,
+                                        categories = song.categories.map { CategoryResponse(it.id, it.name, it.description) },
+                                        tags = song.tags.map { TagResponse(it.id, it.name, it.color) },
                                         createdAt = song.createdAt
                                 )
                         }
@@ -263,6 +267,8 @@ class SongController(
                                         bpm = song.bpm,
                                         chords = song.chords,
                                         lyrics = song.lyrics,
+                                        categories = song.categories.map { CategoryResponse(it.id, it.name, it.description) },
+                                        tags = song.tags.map { TagResponse(it.id, it.name, it.color) },
                                         createdAt = song.createdAt
                                 )
                         }
@@ -327,6 +333,8 @@ class SongController(
                                         bpm = song.bpm,
                                         chords = song.chords,
                                         lyrics = song.lyrics,
+                                        categories = song.categories.map { CategoryResponse(it.id, it.name, it.description) },
+                                        tags = song.tags.map { TagResponse(it.id, it.name, it.color) },
                                         createdAt = song.createdAt
                                 )
                         }

@@ -18,6 +18,8 @@ data class SongResponse(
         @Schema(description = "Beats per minute", example = "120") val bpm: Int?,
         @Schema(description = "ChordPro format chords") val chords: String?,
         @Schema(description = "Full song lyrics") val lyrics: String?,
+        @Schema(description = "Song categories") val categories: List<CategoryResponse> = emptyList(),
+        @Schema(description = "Song tags") val tags: List<TagResponse> = emptyList(),
         @Schema(description = "Creation timestamp") val createdAt: LocalDateTime
 )
 

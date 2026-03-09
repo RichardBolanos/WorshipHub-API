@@ -21,17 +21,29 @@ class SpringDomainEventPublisher(
 }
 
 @Component
-class DomainEventHandler {
+class DomainEventHandler(
+    private val notificationApplicationService: com.worshiphub.application.notification.NotificationApplicationService
+) {
     
     @EventListener
     fun handleSongCreated(event: com.worshiphub.domain.common.SongEvent.SongCreated) {
-        // TODO: Send notification to team members
-        println("Song created: ${event.title} by ${event.artist}")
+        notificationApplicationService.sendNotification(
+            userId = event.createdBy,
+            title = "Nueva canción agregada",
+            message = "${event.title} por ${event.artist} ha sido agregada al catálogo",
+            type = com.worshiphub.domain.collaboration.NotificationType.SONG_ADDED
+        )
     }
     
     @EventListener
     fun handleServiceScheduled(event: com.worshiphub.domain.common.ServiceEvent.ServiceScheduled) {
-        // TODO: Send notifications to team members
-        println("Service scheduled for ${event.scheduledDate} with ${event.teamMembers.size} members")
+        event.teamMembers.forEach { memberId ->
+            notificationApplicationService.sendNotification(
+                userId = memberId,
+                title = "Servicio programado",
+                message = "Has sido asignado al servicio del ${event.scheduledDate}",
+                type = com.worshiphub.domain.collaboration.NotificationType.SERVICE_SCHEDULED
+            )
+        }
     }
 }

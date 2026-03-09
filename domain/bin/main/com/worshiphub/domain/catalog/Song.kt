@@ -32,9 +32,19 @@ data class Song(
         @Column(columnDefinition = "TEXT") val chords: String? = null,
         @Column(columnDefinition = "TEXT") val lyrics: String? = null,
         @Column val duration: Int? = null, // Duration in minutes
-        @OneToMany(mappedBy = "songId", cascade = [CascadeType.ALL], fetch = FetchType.LAZY)
+        @ManyToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE], fetch = FetchType.LAZY)
+        @JoinTable(
+            name = "song_categories",
+            joinColumns = [JoinColumn(name = "song_id")],
+            inverseJoinColumns = [JoinColumn(name = "category_id")]
+        )
         val categories: List<Category> = emptyList(),
-        @OneToMany(mappedBy = "songId", cascade = [CascadeType.ALL], fetch = FetchType.LAZY)
+        @ManyToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE], fetch = FetchType.LAZY)
+        @JoinTable(
+            name = "song_tags",
+            joinColumns = [JoinColumn(name = "song_id")],
+            inverseJoinColumns = [JoinColumn(name = "tag_id")]
+        )
         val tags: List<Tag> = emptyList(),
         @OneToMany(mappedBy = "songId", cascade = [CascadeType.ALL], fetch = FetchType.LAZY)
         val attachments: List<Attachment> = emptyList(),

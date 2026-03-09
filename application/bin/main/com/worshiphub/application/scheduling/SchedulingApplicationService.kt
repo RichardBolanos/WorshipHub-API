@@ -303,11 +303,17 @@ open class SchedulingApplicationService(
             throw IllegalArgumentException("Setlist does not belong to this church")
         }
         
+        // Validate duration (max 90 minutes)
+        require(estimatedDuration <= 90) {
+            "Setlist duration cannot exceed 90 minutes"
+        }
+        
         val updatedSetlist = setlist.copy(
             name = name,
             description = description,
             songIds = songIds,
-            estimatedDuration = estimatedDuration.toInt()
+            estimatedDuration = estimatedDuration.toInt(),
+            updatedAt = LocalDateTime.now()
         )
         
         setlistRepository.save(updatedSetlist)
