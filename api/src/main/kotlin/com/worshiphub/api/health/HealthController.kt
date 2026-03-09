@@ -23,7 +23,8 @@ class HealthController {
         return mapOf(
             "status" to "UP",
             "timestamp" to LocalDateTime.now(),
-            "service" to "WorshipHub API"
+            "service" to "WorshipHub API",
+            "version" to "1.0.0"
         )
     }
 }

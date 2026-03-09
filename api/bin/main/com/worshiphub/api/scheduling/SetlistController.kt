@@ -65,12 +65,12 @@ class SetlistController(
         val setlists = schedulingApplicationService.getAllSetlists(churchId)
         return mapOf(
             "content" to setlists.map { setlist ->
-                mapOf(
+                mapOf<String, Any?>(
                     "id" to setlist.id,
                     "name" to setlist.name,
                     "description" to setlist.description,
                     "songIds" to setlist.songIds,
-                    "estimatedDuration" to setlist.estimatedDuration,
+                    "estimatedDuration" to (setlist.estimatedDuration ?: 0),
                     "eventDate" to setlist.eventDate,
                     "createdAt" to setlist.createdAt,
                     "updatedAt" to setlist.updatedAt
@@ -88,14 +88,14 @@ class SetlistController(
     fun getSetlistById(
         @PathVariable id: UUID,
         @Parameter(description = "Church ID", required = true) @RequestHeader("Church-Id") churchId: UUID
-    ): Map<String, Any> {
+    ): Map<String, Any?> {
         val setlist = schedulingApplicationService.getSetlistById(id, churchId)
         return mapOf(
             "id" to setlist.id,
             "name" to setlist.name,
             "description" to setlist.description,
             "songIds" to setlist.songIds,
-            "estimatedDuration" to setlist.estimatedDuration,
+            "estimatedDuration" to (setlist.estimatedDuration ?: 0),
             "eventDate" to setlist.eventDate,
             "createdAt" to setlist.createdAt,
             "updatedAt" to setlist.updatedAt
@@ -143,9 +143,10 @@ class SetlistController(
     @PreAuthorize("hasRole('WORSHIP_LEADER') or hasRole('CHURCH_ADMIN')")
     fun addSongToSetlist(
         @PathVariable id: UUID,
-        @Valid @RequestBody request: AddSongToSetlistRequest
+        @Valid @RequestBody request: AddSongToSetlistRequest,
+        @Parameter(description = "Church ID", required = true) @RequestHeader("Church-Id") churchId: UUID
     ): Map<String, String> {
-        // TODO: Implement add song to setlist
+        schedulingApplicationService.addSongToSetlist(id, request.songId, request.position ?: -1)
         return mapOf("message" to "Song added to setlist successfully")
     }
     
@@ -162,9 +163,10 @@ class SetlistController(
     @PreAuthorize("hasRole('WORSHIP_LEADER') or hasRole('CHURCH_ADMIN')")
     fun removeSongFromSetlist(
         @PathVariable id: UUID,
-        @PathVariable songId: UUID
+        @PathVariable songId: UUID,
+        @Parameter(description = "Church ID", required = true) @RequestHeader("Church-Id") churchId: UUID
     ) {
-        // TODO: Implement remove song from setlist
+        schedulingApplicationService.removeSongFromSetlist(id, songId)
     }
 }
 
