@@ -33,14 +33,13 @@ class SecurityConfig(
             .headers { headers ->
                 headers
                     .frameOptions { it.deny() }
-                    .contentTypeOptions { it.and() }
+                    .contentTypeOptions { }
                     .httpStrictTransportSecurity { hstsConfig ->
                         hstsConfig
                             .maxAgeInSeconds(31536000) // 1 year
                             .includeSubDomains(true)
                     }
-                    .and()
-                    .headers { h -> h.cacheControl { } }
+                    .cacheControl { }
             }
             .authorizeHttpRequests { auth ->
                 auth

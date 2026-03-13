@@ -5,10 +5,24 @@ echo ========================================
 
 echo.
 echo Iniciando aplicación con H2 en memoria...
-echo Base de datos: H2 (en memoria)
-echo Consola H2: http://localhost:9090/h2-console
+echo.
+echo Configuracion:
+echo   Base de datos: H2 (en memoria)
+echo   Puerto API: 9090
+echo   Consola H2: http://localhost:9090/h2-console
+echo.
+echo Credenciales H2 Console:
+echo   JDBC URL: jdbc:h2:mem:worshiphub
+echo   Username: sa
+echo   Password: (dejar vacio)
+echo.
+echo ========================================
 
-cd /d "%~dp0.."
-gradlew bootRun --args="--spring.profiles.active=h2"
+echo.
+echo Iniciando aplicacion...
+echo.
+
+cd /d "%~dp0..\.."
+call gradlew.bat :api:bootRun --args="--spring.profiles.active=h2"
 
 pause

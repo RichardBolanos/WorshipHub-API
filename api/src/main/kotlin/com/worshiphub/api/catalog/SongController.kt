@@ -79,6 +79,7 @@ class SongController(
         @PreAuthorize("hasRole('WORSHIP_LEADER') or hasRole('CHURCH_ADMIN')")
         fun createSong(@Valid @RequestBody request: CreateSongRequest): SongResponse {
                 val churchId = securityContext.getCurrentChurchId()
+                val userId = securityContext.getCurrentUserId()
                 val command =
                         CreateSongCommand(
                                 title = request.title,
@@ -87,7 +88,8 @@ class SongController(
                                 bpm = request.bpm,
                                 lyrics = request.lyrics,
                                 chords = request.chords,
-                                churchId = churchId
+                                churchId = churchId,
+                                createdBy = userId
                         )
 
                 val result = catalogApplicationService.createSong(command)

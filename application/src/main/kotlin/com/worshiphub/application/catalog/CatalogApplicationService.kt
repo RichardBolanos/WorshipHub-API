@@ -54,6 +54,19 @@ open class CatalogApplicationService(
                     )
 
             val savedSong = songRepository.save(song)
+            
+            // Publish domain event for notifications
+            // TODO: Inject DomainEventPublisher and publish SongCreated event
+            // domainEventPublisher.publish(
+            //     SongEvent.SongCreated(
+            //         aggregateId = savedSong.id,
+            //         title = savedSong.title,
+            //         artist = savedSong.artist ?: "Unknown",
+            //         churchId = savedSong.churchId,
+            //         createdBy = command.createdBy
+            //     )
+            // )
+            
             Result.success(savedSong)
         } catch (e: Exception) {
             Result.failure(RuntimeException("Failed to create song", e))

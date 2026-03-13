@@ -139,87 +139,214 @@
 
 ---
 
-## 📊 **API COVERAGE**
+## 📊 **API COVERAGE - COMPLETE MAPPING**
 
-### **🚨 CRITICAL AUTHENTICATION GAPS IDENTIFIED**
+### **✅ AUTHENTICATION & AUTHORIZATION (11 Controllers, 20+ Endpoints)**
 
-**Current Issues:**
-- ❌ **Incomplete Registration Flow** - No church creation for first users
-- ❌ **Missing Email Verification** - Security vulnerability
-- ❌ **Broken Invitation System** - Stub implementations only
-- ❌ **No Password Recovery** - Users can be permanently locked out
-- ❌ **Incomplete Role Management** - No role change endpoints
+**Controllers:**
+- `AuthController` - Login, register, logout
+- `ChurchRegistrationController` - Church + admin registration
+- `EmailVerificationController` - Email verification flow
+- `PasswordResetController` - Password recovery
+- `PasswordManagementController` - Password change
+- `InvitationController` - User invitations
+- `RoleManagementController` - Role management
+- `OAuth2Controller` - Google Sign-In
+- `LogoutController` - Token blacklisting
 
-### **📋 AUTHENTICATION CORRECTION PLAN**
+**Key Services:**
+- `AuthenticationService` - Core authentication logic
+- `JwtTokenService` - Token generation and validation
+- `EmailVerificationService` - Email verification tokens (24h)
+- `PasswordResetService` - Password reset tokens (1h)
+- `InvitationService` - Invitation tokens (7 days)
+- `RoleManagementService` - Role hierarchy and authorization
+- `ChurchRegistrationService` - Church onboarding
+- `OAuth2AuthenticationService` - OAuth2 integration
+- `AuditService` - Security event logging
+- `PasswordValidator` - Password policy enforcement
+- `InvitationRateLimitService` - Rate limiting for invitations
 
-#### **Phase 1: Core Authentication Fixes (PRIORITY 1)**
-1. **Email Verification System**
-   - Email verification tokens and endpoints
-   - SMTP configuration for production
-   - Account activation workflow
+### **📋 ORGANIZATION & TEAMS (4 Controllers, 15+ Endpoints)**
 
-2. **Complete Registration Flow**
-   - Church + Admin registration endpoint
-   - Proper user onboarding process
-   - Role assignment validation
+**Controllers:**
+- `ChurchController` - Church management
+- `UserController` - User CRUD operations
+- `TeamController` - Team management
+- `UserProfileController` - User profile management
 
-3. **Password Recovery System**
-   - Forgot password with secure tokens
-   - Password reset with email verification
-   - Token expiration and security
+**Key Services:**
+- `OrganizationApplicationService` - Organization orchestration
 
-#### **Phase 2: Invitation System (PRIORITY 2)**
-1. **Secure Invitation Tokens**
-   - JWT-based invitation tokens
-   - Email invitation templates
-   - Invitation acceptance workflow
+**Commands:**
+- `RegisterChurchCommand` - Church registration
+- `CreateTeamCommand` - Team creation
+- `AssignTeamMemberCommand` - Member assignment
+- `InviteUserCommand` - User invitation
 
-2. **Role Management**
-   - Role change endpoints with proper authorization
-   - Role hierarchy validation
-   - Audit logging for role changes
+**Domain Entities:**
+- `Church` - Organization aggregate root
+- `User` - User with roles and authentication
+- `Team` - Worship team entity
+- `TeamMember` - Team membership with roles
+- `UserRole` - Role enumeration (SUPER_ADMIN, CHURCH_ADMIN, WORSHIP_LEADER, TEAM_MEMBER)
 
-#### **Phase 3: Security Enhancements (PRIORITY 3)**
-1. **Account Security**
-   - Account lockout after failed attempts
-   - Password history to prevent reuse
-   - Two-factor authentication preparation
+### **🎵 CATALOG MANAGEMENT (3 Controllers, 15+ Endpoints)**
 
-2. **Audit & Monitoring**
-   - Authentication event logging
-   - Suspicious activity detection
-   - Security metrics and alerts
+**Controllers:**
+- `SongController` - Song CRUD, search, transpose
+- `CategoryController` - Categories and tags
+- `GlobalSongController` - Global song catalog
 
-### **🚧 REST API (50+ Endpoints) - AUTHENTICATION IN PROGRESS**
-- **Authentication:** 8 endpoints 🚧 (3 basic + 5 new being implemented)
-- **Organization:** 12 endpoints ✅ (churches, users, teams, profiles) + ⚠️ invitations (stub)
-- **Catalog:** 12 endpoints ✅ (songs, categories, attachments, comments)
-- **Scheduling:** 10 endpoints ✅ (services, setlists, confirmations, availability)
-- **Communication:** 4 endpoints ✅ (notifications, chat history)
-- **System:** 5 endpoints ✅ (health, metrics, system info)
+**Key Services:**
+- `CatalogApplicationService` - Catalog orchestration
 
-**✅ NEW AUTHENTICATION ENDPOINTS (IMPLEMENTED):**
-- `POST /api/v1/auth/church/register` - Complete church + admin registration ✅
-- `POST /api/v1/auth/email/send-verification` - Send email verification ✅
-- `GET /api/v1/auth/email/verify/{token}` - Verify email address ✅
-- `POST /api/v1/auth/password/forgot` - Request password reset ✅
-- `GET /api/v1/auth/password/reset/{token}/validate` - Validate reset token ✅
-- `POST /api/v1/auth/password/reset` - Reset password with token ✅
+**Commands:**
+- `CreateSongCommand` - Song creation
+- `UpdateSongCommand` - Song updates
+- `AddAttachmentCommand` - Attachment management
+- `AddCommentCommand` - Song comments
+- `CreateCategoryCommand` - Category creation
 
-**✅ NEW INVITATION ENDPOINTS (IMPLEMENTED):**
-- `POST /api/v1/invitations/send` - Send invitation to join church ✅
-- `GET /api/v1/invitations/{token}` - Get invitation details ✅
-- `POST /api/v1/invitations/{token}/accept` - Accept invitation and create account ✅
+**Domain Entities:**
+- `Song` - Song aggregate with chords, lyrics, metadata
+- `Category` - Song categorization
+- `Tag` - Song tagging
+- `Attachment` - YouTube/PDF/Spotify links
+- `GlobalSong` - Global catalog songs
+- `SongComment` - Team discussions on songs
 
-**✅ NEW ROLE MANAGEMENT ENDPOINTS (IMPLEMENTED):**
-- `PUT /api/v1/roles/users/{userId}` - Change user role ✅
-- `GET /api/v1/roles/users` - List church users with roles ✅
-- `GET /api/v1/roles/available` - Get available roles and permissions ✅
+**Domain Services:**
+- `ChordTransposer` - Musical key transposition engine
 
-**🚧 STILL NEEDED:**
-- Account lockout and security policies
-- Production email service integration (SMTP)
-- Enhanced audit logging with database storage
+### **📅 SCHEDULING & PLANNING (3 Controllers, 12+ Endpoints)**
+
+**Controllers:**
+- `ServiceEventController` - Service scheduling
+- `SetlistController` - Setlist CRUD
+- `SetlistManagementController` - Setlist operations
+
+**Key Services:**
+- `SchedulingApplicationService` - Scheduling orchestration
+
+**Commands:**
+- `ScheduleCommand` - Service scheduling
+- `CreateSetlistCommand` - Setlist creation
+- `GenerateSetlistCommand` - Auto-generation
+- `ResponseCommand` - Invitation responses
+- `MarkUnavailabilityCommand` - Availability marking
+
+**Domain Entities:**
+- `ServiceEvent` - Scheduled service aggregate
+- `Setlist` - Song collection for services
+- `AssignedMember` - Team member assignments
+- `UserAvailability` - Member availability tracking
+
+**Domain Services:**
+- `SetlistGenerationService` - Intelligent setlist generation
+
+### **💬 COMMUNICATION (2 Controllers, 6+ Endpoints)**
+
+**Controllers:**
+- `NotificationController` - Notification management
+- `ChatController` - Team chat (REST + WebSocket)
+
+**Key Services:**
+- `NotificationApplicationService` - Notification orchestration
+- `ChatApplicationService` - Chat orchestration
+
+**Commands:**
+- `SendMessageCommand` - Chat message sending
+
+**Domain Entities:**
+- `Notification` - User notifications
+- `ChatMessage` - Team chat messages
+
+### **🔧 SYSTEM & HEALTH (3 Controllers, 8+ Endpoints)**
+
+**Controllers:**
+- `HealthController` - Application health
+- `SystemHealthController` - System diagnostics
+- `SystemInfoController` - System information
+- `RootController` - API root
+
+### **🚧 REST API SUMMARY (60+ Endpoints)**
+- **Authentication:** 20+ endpoints ✅ (complete auth system)
+- **Organization:** 15+ endpoints ✅ (churches, users, teams, profiles, invitations)
+- **Catalog:** 15+ endpoints ✅ (songs, categories, attachments, comments, global catalog)
+- **Scheduling:** 12+ endpoints ✅ (services, setlists, confirmations, availability, generation)
+- **Communication:** 6+ endpoints ✅ (notifications, chat REST + WebSocket)
+- **System:** 8+ endpoints ✅ (health, metrics, system info)
+
+### **🏗️ INFRASTRUCTURE & CONFIGURATION**
+
+**Security Configuration:**
+- `SecurityConfig` - Spring Security setup with JWT
+- `JwtAuthenticationFilter` - Token validation filter
+- `JwtTokenProvider` - Token generation and parsing
+- `JwtAuthenticationEntryPoint` - Unauthorized handler
+- `SecurityContext` - Security context management
+- `WebSocketAuthInterceptor` - WebSocket authentication
+
+**Application Configuration:**
+- `CorsConfig` - CORS policy configuration
+- `WebSocketConfig` - WebSocket STOMP configuration
+- `OpenApiConfig` / `SwaggerConfig` - API documentation
+- `CacheConfig` - Caching strategy
+- `TransactionConfig` - Transaction management
+- `ValidationConfig` - Input validation
+- `DatabaseConfig` / `JpaConfig` - Database configuration
+- `RateLimitingConfig` - Rate limiting (100 req/min)
+- `MetricsConfig` - Performance metrics
+- `PerformanceConfig` - Performance optimization
+
+**Monitoring & Logging:**
+- `LoggingConfig` - Structured logging with correlation IDs
+- `AuditLoggingAspect` - Security audit logging
+- `SecurityAuditConfig` - Audit event configuration
+- `GlobalExceptionHandler` - Centralized error handling
+- `FilterConfig` - Request/response logging
+
+**Domain Events:**
+- `DomainEventConfig` - Event-driven architecture setup
+- `DomainEvent` - Base event interface
+
+**Data Management:**
+- `DataInitializer` - Initial data seeding
+- `ErrorLog` - Error logging entity
+- `ErrorLogRepository` - Error persistence
+- `ErrorLogApplicationService` - Error management
+
+### **📦 DOMAIN REPOSITORIES (COMPLETE MAPPING)**
+
+**Authentication Repositories:**
+- `EmailVerificationTokenRepository`
+- `PasswordResetTokenRepository`
+- `InvitationTokenRepository`
+
+**Organization Repositories:**
+- `ChurchRepository`
+- `UserRepository`
+- `TeamRepository`
+- `TeamMemberRepository`
+
+**Catalog Repositories:**
+- `SongRepository`
+- `CategoryRepository`
+- `TagRepository`
+- `AttachmentRepository`
+- `GlobalSongRepository`
+
+**Scheduling Repositories:**
+- `ServiceEventRepository`
+- `SetlistRepository`
+- `AssignedMemberRepository`
+- `UserAvailabilityRepository`
+
+**Collaboration Repositories:**
+- `NotificationRepository`
+- `ChatMessageRepository`
+- `SongCommentRepository`
 
 ### **✅ Real-time Features**
 - **WebSocket chat** with STOMP protocol
@@ -564,3 +691,338 @@ The WorshipHub API project has successfully achieved:
 **TOTAL: 21 test files covering 71% of endpoints with 50+ individual test cases**
 
 **RESULT:** 🎆 **PRODUCTION-READY TESTING ACHIEVED**
+
+---
+
+## 📱 **FLUTTER FRONTEND - COMPLETE ARCHITECTURE**
+
+### **🏗️ CLEAN ARCHITECTURE IMPLEMENTATION**
+
+**Layer Structure:**
+- **Domain Layer** (`lib/domain/`) - Pure business logic, entities, repositories interfaces, use cases
+- **Data Layer** (`lib/data/`) - Repository implementations, data sources, models
+- **Presentation Layer** (`lib/presentation/`) - UI, BLoC state management, widgets
+- **Core Layer** (`lib/core/`) - Shared utilities, configuration, services
+
+### **📦 DOMAIN LAYER (13 Entities, 12 Repositories, 35+ Use Cases)**
+
+**Entities:**
+- `User` - User authentication entity
+- `UserProfile` - User profile with church info
+- `UserRole` - Role enumeration
+- `Song` - Song with chords and metadata
+- `Setlist` - Song collection entity
+- `ServiceEvent` - Scheduled service
+- `Team` - Worship team entity
+- `TeamMember` - Team membership
+- `Invitation` - User invitation
+- `Notification` - User notification
+- `ChatMessage` - Team chat message
+- `Availability` - User availability
+- `DashboardStats` - Dashboard statistics
+
+**Repository Interfaces:**
+- `AuthRepository` - Authentication operations
+- `SongRepository` - Song catalog management
+- `SetlistRepository` - Setlist operations
+- `ServiceRepository` - Service scheduling
+- `TeamRepository` - Team management
+- `InvitationRepository` - Invitation handling
+- `NotificationRepository` - Notification management
+- `ChatRepository` - Chat operations
+- `AvailabilityRepository` - Availability tracking
+- `CategoryRepository` - Category/tag management
+- `UserProfileRepository` - Profile management
+- `DashboardRepository` - Dashboard data
+
+**Use Cases (35+):**
+- Authentication: `LoginUser`, `RegisterChurchUseCase`, `EmailVerificationUseCases`, `PasswordManagementUseCases`
+- Songs: `GetAllSongs`, `TransposeSong`, `GlobalSongUseCases`
+- Setlists: `CreateSetlist`, `UpdateSetlist`, `GenerateSetlist`, `AddSongToSetlist`, `RemoveSongFromSetlist`, `ReorderSetlistSongs`, `GetAllSetlists`
+- Teams: `TeamUseCases` (create, list, manage members)
+- Invitations: `InvitationUseCases`, `AcceptInvitationUseCase`
+- Categories: `CategoryUseCases` (CRUD operations)
+- Profile: `GetUserProfileUseCase`, `UpdateUserProfileUseCase`
+- Dashboard: Dashboard use cases
+
+### **💾 DATA LAYER (OFFLINE-FIRST ARCHITECTURE)**
+
+**Local Data Sources (Drift Database):**
+- `SongLocalDataSource` - Local song storage
+- `SetlistLocalDataSource` - Local setlist storage
+- `CategoryLocalDataSource` - Local category storage
+- `NotificationLocalDataSource` - Local notification storage
+- `AvailabilityLocalDataSource` - Local availability storage
+- `ServiceLocalDataSource` - Local service storage
+
+**Remote Data Sources (API Integration):**
+- `AuthRemoteDataSource` - Authentication API
+- `SongRemoteDataSource` - Song catalog API
+- `SetlistRemoteDataSource` - Setlist API
+- `ServiceRemoteDataSource` - Service scheduling API
+- `TeamRemoteDataSource` - Team management API
+- `InvitationRemoteDataSource` - Invitation API
+- `NotificationRemoteDataSource` - Notification API
+- `ChatRemoteDataSource` - Chat API
+- `CategoryRemoteDataSource` - Category API
+- `UserProfileRemoteDataSource` - Profile API
+
+**Repository Implementations (Cache-First Strategy):**
+- All repositories implement offline-first pattern
+- Local cache with background API sync
+- Optimistic updates with rollback on failure
+- Conflict resolution strategies
+- Transaction management for data consistency
+
+### **🎨 PRESENTATION LAYER (13 Features, 50+ Screens/Widgets)**
+
+**Features with BLoC State Management:**
+
+1. **Authentication Feature** (`presentation/features/auth/`)
+   - `AuthBloc` - Authentication state management
+   - `LoginPage` - Login screen with animations
+   - `RegisterPage` - Registration screen
+   - `ChurchRegistrationPage` - Church onboarding
+   - `EmailVerificationPage` - Email verification
+   - `PasswordRecoveryPage` - Password reset
+
+2. **Dashboard Feature** (`presentation/features/dashboard/`)
+   - `DashboardBloc` - Dashboard state
+   - `DashboardPage` - Main dashboard with stats
+
+3. **Songs Feature** (`presentation/features/songs/`)
+   - `SongBloc` - Song state management
+   - `SongListPage` - Song catalog with search/filter
+   - `SongDetailPage` - Song details with chords
+   - `AddSongPage` - Song creation form
+   - `TransposeSongPage` - Chord transposition
+   - Shimmer loading effects
+   - Staggered list animations
+
+4. **Setlists Feature** (`presentation/features/setlists/`)
+   - `SetlistBloc` - Setlist state management
+   - `SetlistListPage` - Setlist grid with animations
+   - `SetlistBuilderPage` - Drag-and-drop builder
+   - `SetlistCard` - Hero animations
+   - `DraggableSongItem` - Reorderable items
+   - `SongSelectorBottomSheet` - Song selection
+   - Duration calculation display
+
+5. **Calendar Feature** (`presentation/features/calendar/`)
+   - `CalendarPage` - Service scheduling calendar
+   - `table_calendar` integration
+   - Event visualization
+   - Availability marking
+
+6. **Teams Feature** (`presentation/features/teams/`)
+   - `TeamBloc` - Team state management
+   - `TeamListPage` - Team listing
+   - `TeamDetailPage` - Team members and roles
+   - `CreateTeamPage` - Team creation
+
+7. **Invitations Feature** (`presentation/features/invitations/`)
+   - `InvitationBloc` - Invitation state
+   - `InvitationListPage` - Pending invitations
+   - `SendInvitationPage` - Send invitation form
+   - `AcceptInvitationPage` - Invitation acceptance
+
+8. **Categories Feature** (`presentation/features/categories/`)
+   - `CategoryBloc` - Category state management
+   - `CategoryManagementPage` - Category CRUD
+   - `ColorPickerWidget` - Color selection
+   - Chip animations
+
+9. **Notifications Feature** (`presentation/features/notifications/`)
+   - `NotificationOverlay` - Animated notification display
+   - `NotificationListPage` - Notification center
+   - Badge counter
+   - Read/unread states
+
+10. **Chat Feature** (`presentation/features/chat/`)
+    - `ChatBloc` - Chat state management
+    - `ChatPage` - Real-time team chat
+    - WebSocket integration
+    - Message history
+
+11. **Profile Feature** (`presentation/features/profile/`)
+    - `ProfileBloc` - Profile state
+    - `PasswordBloc` - Password management
+    - `ProfilePage` - User profile screen
+    - `EditProfilePage` - Profile editing
+    - `ChangePasswordPage` - Password change
+
+12. **Home Feature** (`presentation/features/home/`)
+    - `HomePage` - Main navigation hub
+    - Bottom navigation bar
+
+13. **Welcome Feature** (`presentation/features/welcome/`)
+    - `WelcomePage` - Onboarding screen
+
+**Shared Widgets** (`presentation/widgets/`)
+- `PremiumCard` - Reusable card component
+- `MusicalKeySelector` - Key selection widget
+- `ConnectionStatusIndicator` - Network status
+- `SyncStatusWidget` - Sync indicator
+- `ComingSoonWidget` - Placeholder widget
+
+### **⚙️ CORE INFRASTRUCTURE**
+
+**Configuration** (`core/config/`)
+- `ApiConfig` - API endpoints and environment detection
+- `AppConfig` - Application configuration
+
+**Database** (`core/database/`)
+- `DatabaseService` - Drift database setup
+- `DatabaseCleaner` - Data cleanup utilities
+- Platform-specific implementations (native/web)
+
+**Dependency Injection** (`core/dependency_injection/`)
+- `ServiceLocator` - GetIt service locator setup
+- All dependencies registered and managed
+
+**Error Handling** (`core/error/`)
+- `GlobalErrorHandler` - Centralized error handling
+- `AppBlocObserver` - BLoC error tracking
+- Structured error logging
+
+**Networking** (`core/services/`)
+- `HttpClientWrapper` - Dio HTTP client
+- `AuthInterceptor` - JWT token injection
+- `ConnectivityService` - Network monitoring
+- `WebSocketService` - Real-time communication
+- `TokenService` - Token management
+- `AuthContextService` - Auth context tracking
+
+**Storage** (`core/storage/`)
+- `SecureStorageService` - Secure token storage
+
+**Synchronization** (`core/sync/`)
+- `SyncManager` - Background sync orchestration
+- Conflict resolution
+- Retry logic
+
+**Routing** (`core/router/`)
+- `AppRouter` - go_router configuration
+- `AuthGuard` - Route protection
+- Named routes with parameters
+- Custom page transitions
+
+**Theme** (`core/theme/`)
+- `AppTheme` - Material 3 theme
+- Dark/light mode support
+- Custom color schemes
+- Typography system
+
+**Utilities** (`core/utils/`)
+- `IdGenerator` - UUID generation
+
+**Constants** (`core/constants/`)
+- `MusicalKeys` - Musical key definitions
+
+### **🎭 ANIMATIONS & UX**
+
+**Animation Framework:**
+- `flutter_animate` - Primary animation library
+- Staggered list animations
+- Page transitions (Fade, Slide)
+- Shimmer loading effects
+- Hero animations on cards
+- Drag-and-drop feedback
+
+**User Experience:**
+- Haptic feedback on interactions
+- Optimistic UI updates
+- Loading states with shimmer
+- Error states with retry
+- Empty states with illustrations
+- Pull-to-refresh
+- Infinite scroll pagination
+
+### **🔐 SECURITY IMPLEMENTATION**
+
+**Authentication:**
+- JWT token storage in secure storage
+- Automatic token refresh
+- Token expiration handling
+- Biometric authentication ready
+
+**Data Protection:**
+- Encrypted local database
+- Secure token storage
+- HTTPS enforcement
+- Certificate pinning ready
+
+**Authorization:**
+- Role-based UI rendering
+- Route guards
+- Feature flags by role
+
+### **📡 REAL-TIME FEATURES**
+
+**WebSocket Integration:**
+- Team chat with STOMP protocol
+- Real-time notifications
+- Live service updates
+- Connection management
+- Automatic reconnection
+
+### **💾 OFFLINE CAPABILITIES**
+
+**Offline-First Strategy:**
+- All data cached locally with Drift
+- Background sync when online
+- Optimistic updates
+- Conflict resolution
+- Sync status indicators
+- Queue for pending operations
+
+### **🧪 TESTING**
+
+**Test Coverage:**
+- BLoC unit tests
+- Repository tests
+- Widget tests for key screens
+- Integration tests
+- Mock data for development
+
+### **📦 DEPENDENCIES (OPTIMIZED)**
+
+**State Management:**
+- `flutter_bloc` ^9.1.1
+- `equatable` ^2.0.5
+
+**Networking:**
+- `dio` ^5.7.0
+- `http` ^1.1.0
+- `connectivity_plus` ^6.1.0
+- `web_socket_channel` ^3.0.1
+
+**Database:**
+- `drift` ^2.30.1
+- `sqlite3_flutter_libs` ^0.5.24
+- `path_provider` ^2.1.4
+
+**Navigation:**
+- `go_router` ^17.0.1
+
+**Storage:**
+- `shared_preferences` ^2.5.3
+- `flutter_secure_storage` ^10.0.0
+
+**UI/Animations:**
+- `flutter_animate` ^4.5.0
+- `shimmer` ^3.0.0
+- `flutter_staggered_animations` ^1.1.1
+- `table_calendar` ^3.1.2
+
+**Firebase:**
+- `firebase_core` ^4.2.1
+- `firebase_auth` ^6.1.2
+- `firebase_messaging` ^16.0.4
+- `google_sign_in` ^7.2.0
+
+**Utilities:**
+- `fluttertoast` ^9.0.0
+- `get_it` ^9.2.0
+
+---

@@ -92,4 +92,15 @@ data class Song(
     fun hasTag(tagName: String): Boolean {
         return tags.any { it.name.equals(tagName, ignoreCase = true) }
     }
+    
+    // Override equals and hashCode to use only ID for entity identity
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Song) return false
+        return id == other.id
+    }
+    
+    override fun hashCode(): Int {
+        return id.hashCode()
+    }
 }
