@@ -10,6 +10,7 @@ import java.util.*
 interface JpaUserAvailabilityRepository : JpaRepository<UserAvailability, UUID> {
     fun findByUserIdAndUnavailableDate(userId: UUID, date: LocalDate): UserAvailability?
     fun findByUserId(userId: UUID): List<UserAvailability>
+    fun findByUserIdAndUnavailableDateBetween(userId: UUID, startDate: LocalDate, endDate: LocalDate): List<UserAvailability>
 }
 
 @Repository
@@ -25,6 +26,9 @@ open class UserAvailabilityRepositoryImpl(
         jpaRepository.findByUserIdAndUnavailableDate(userId, date)
     
     override fun findByUserId(userId: UUID): List<UserAvailability> = jpaRepository.findByUserId(userId)
+    
+    override fun findByUserIdAndDateRange(userId: UUID, startDate: LocalDate, endDate: LocalDate): List<UserAvailability> =
+        jpaRepository.findByUserIdAndUnavailableDateBetween(userId, startDate, endDate)
     
     override fun delete(availability: UserAvailability) = jpaRepository.delete(availability)
 }

@@ -89,7 +89,9 @@ class SongController(
                                 lyrics = request.lyrics,
                                 chords = request.chords,
                                 churchId = churchId,
-                                createdBy = userId
+                                createdBy = userId,
+                                tagIds = request.tagIds,
+                                categoryIds = request.categoryIds
                         )
 
                 val result = catalogApplicationService.createSong(command)
@@ -110,48 +112,6 @@ class SongController(
                 } else {
                         throw BadRequestException(
                                 result.exceptionOrNull()?.message ?: "Failed to create song"
-                        )
-                }
-        }
-
-        @Operation(
-                summary = "Transpose song chords",
-                description = "Transposes all chords in a song to a different musical key",
-                security = [SecurityRequirement(name = "bearerAuth")]
-        )
-        @ApiResponses(
-                value =
-                        [
-                                ApiResponse(
-                                        responseCode = "200",
-                                        description = "Chords successfully transposed"
-                                ),
-                                ApiResponse(
-                                        responseCode = "400",
-                                        description = "Invalid key specified"
-                                ),
-                                ApiResponse(responseCode = "404", description = "Song not found"),
-                                ApiResponse(
-                                        responseCode = "403",
-                                        description = "Insufficient permissions"
-                                )]
-        )
-        @PostMapping("/{songId}/transpose")
-        @PreAuthorize(
-                "hasRole('TEAM_MEMBER') or hasRole('WORSHIP_LEADER') or hasRole('CHURCH_ADMIN')"
-        )
-        fun transposeSong(
-                @Parameter(description = "Song ID", required = true) @PathVariable songId: UUID,
-                @Parameter(description = "Target musical key (e.g., C, D, F#)", required = true)
-                @RequestParam
-                toKey: String
-        ): TransposeChordsResponse {
-                val result = catalogApplicationService.transposeSong(songId, toKey)
-                return if (result.isSuccess) {
-                        TransposeChordsResponse(chords = result.getOrThrow(), targetKey = toKey)
-                } else {
-                        throw BadRequestException(
-                                result.exceptionOrNull()?.message ?: "Failed to transpose song"
                         )
                 }
         }
@@ -504,7 +464,7 @@ class SongController(
         fun updateSong(
                 @PathVariable id: UUID,
                 @Valid @RequestBody request: UpdateSongRequest
-        ): Map<String, Any> {
+        ): SongResponse {
                 val command =
                         UpdateSongCommand(
                                 title = request.title,
@@ -512,17 +472,35 @@ class SongController(
                                 key = request.key,
                                 bpm = request.bpm,
                                 lyrics = request.lyrics,
-                                chords = request.chords
+                                chords = request.chords,
+                                tagIds = request.tagIds,
+                                categoryIds = request.categoryIds
                         )
 
                 val result = catalogApplicationService.updateSong(id, command)
-                return if (result.isSuccess) {
-                        mapOf("id" to id, "message" to "Song updated successfully")
-                } else {
+                if (result.isFailure) {
                         throw BadRequestException(
                                 result.exceptionOrNull()?.message ?: "Failed to update song"
                         )
                 }
+
+                val songResult = catalogApplicationService.getSongById(id)
+                val song = songResult.getOrElse {
+                        throw NotFoundException(it.message ?: "Song not found after update")
+                }
+
+                return SongResponse(
+                        id = song.id,
+                        title = song.title,
+                        artist = song.artist,
+                        key = song.key,
+                        bpm = song.bpm,
+                        chords = song.chords,
+                        lyrics = song.lyrics,
+                        categories = song.categories.map { CategoryResponse(it.id, it.name, it.description) },
+                        tags = song.tags.map { TagResponse(it.id, it.name, it.color) },
+                        createdAt = song.createdAt
+                )
         }
 
         @Operation(

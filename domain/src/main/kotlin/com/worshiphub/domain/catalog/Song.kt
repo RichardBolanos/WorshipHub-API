@@ -38,14 +38,14 @@ data class Song(
             joinColumns = [JoinColumn(name = "song_id")],
             inverseJoinColumns = [JoinColumn(name = "category_id")]
         )
-        val categories: List<Category> = emptyList(),
+        val categories: Set<Category> = emptySet(),
         @ManyToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE], fetch = FetchType.LAZY)
         @JoinTable(
             name = "song_tags",
             joinColumns = [JoinColumn(name = "song_id")],
             inverseJoinColumns = [JoinColumn(name = "tag_id")]
         )
-        val tags: List<Tag> = emptyList(),
+        val tags: Set<Tag> = emptySet(),
         @OneToMany(mappedBy = "songId", cascade = [CascadeType.ALL], fetch = FetchType.LAZY)
         val attachments: List<Attachment> = emptyList(),
         @Column(nullable = false) val churchId: UUID,

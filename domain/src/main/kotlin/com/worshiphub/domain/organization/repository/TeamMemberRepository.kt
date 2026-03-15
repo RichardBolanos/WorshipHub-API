@@ -9,5 +9,7 @@ interface TeamMemberRepository {
     fun findByTeamId(teamId: UUID): List<TeamMember>
     fun findByTeamIdAndUserId(teamId: UUID, userId: UUID): TeamMember?
     fun deleteByTeamIdAndUserId(teamId: UUID, userId: UUID)
+    fun deleteByTeamId(teamId: UUID)
+    fun countByTeamId(teamId: UUID): Int
     fun delete(teamMember: TeamMember)
 }

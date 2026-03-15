@@ -147,6 +147,7 @@ El proyecto implementa **Clean Architecture** con **Domain-Driven Design (DDD)**
 - **SpringDoc OpenAPI**: Documentación Swagger
 - **JUnit 5**: Testing unitario
 - **MockK**: Mocking para Kotlin
+- **Kotest 5.8.0**: Property-based testing y assertions para Kotlin
 - **Spring Boot Test**: Testing de integración
 
 ### Herramientas de Desarrollo
@@ -370,7 +371,6 @@ POST   /api/v1/songs                         # Crear canción
 GET    /api/v1/songs/{id}                    # Obtener canción
 PATCH  /api/v1/songs/{id}                    # Actualizar canción
 DELETE /api/v1/songs/{id}                    # Eliminar canción
-POST   /api/v1/songs/{id}/transpose          # Transponer canción
 GET    /api/v1/songs/search                  # Buscar canciones
 POST   /api/v1/songs/{id}/attachments        # Agregar adjunto
 POST   /api/v1/songs/{id}/comments           # Agregar comentario
@@ -412,11 +412,12 @@ PATCH  /api/v1/notifications/{id}/read       # Marcar como leída
 DELETE /api/v1/notifications/{id}            # Eliminar notificación
 ```
 
-#### Chat (WebSocket)
+#### Chat (WebSocket + REST)
 ```
 WS     /ws/chat                              # Conexión WebSocket
-POST   /api/v1/chat/messages                 # Enviar mensaje (REST)
-GET    /api/v1/chat/messages                 # Obtener historial
+STOMP  /chat.sendMessage                     # Enviar mensaje vía WebSocket
+GET    /api/v1/teams/{teamId}/chat/history   # Obtener historial de chat
+POST   /api/v1/teams/{teamId}/messages       # Enviar mensaje vía REST (201)
 ```
 
 ### Autenticación en API
