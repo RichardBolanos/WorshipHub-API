@@ -11,11 +11,13 @@ interface JpaUserAvailabilityRepository : JpaRepository<UserAvailability, UUID> 
     fun findByUserIdAndUnavailableDate(userId: UUID, date: LocalDate): UserAvailability?
     fun findByUserId(userId: UUID): List<UserAvailability>
     fun findByUserIdAndUnavailableDateBetween(userId: UUID, startDate: LocalDate, endDate: LocalDate): List<UserAvailability>
+    fun findByUserIdInAndUnavailableDate(userIds: List<UUID>, date: LocalDate): List<UserAvailability>
 }
 
 @Repository
 open class UserAvailabilityRepositoryImpl(
-    private val jpaRepository: JpaUserAvailabilityRepository
+    private val jpaRepository: JpaUserAvailabilityRepository,
+    private val jpaTeamMemberRepository: JpaTeamMemberRepository
 ) : UserAvailabilityRepository {
     
     override fun save(availability: UserAvailability): UserAvailability = jpaRepository.save(availability)
@@ -31,4 +33,14 @@ open class UserAvailabilityRepositoryImpl(
         jpaRepository.findByUserIdAndUnavailableDateBetween(userId, startDate, endDate)
     
     override fun delete(availability: UserAvailability) = jpaRepository.delete(availability)
+    
+    override fun deleteByDateAndTeamMembers(date: LocalDate, teamId: UUID) {
+        val teamMembers = jpaTeamMemberRepository.findByTeamId(teamId)
+        if (teamMembers.isEmpty()) return
+        val memberUserIds = teamMembers.map { it.userId }
+        val availabilities = jpaRepository.findByUserIdInAndUnavailableDate(memberUserIds, date)
+        if (availabilities.isNotEmpty()) {
+            jpaRepository.deleteAll(availabilities)
+        }
+    }
 }

@@ -274,6 +274,7 @@ class TeamController(
                 TeamMemberResponse(
                     id = member.id,
                     userId = member.userId,
+                    userName = organizationApplicationService.getUserFullName(member.userId),
                     teamRole = member.teamRole,
                     joinedAt = member.joinedAt
                 )

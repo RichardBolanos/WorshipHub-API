@@ -66,6 +66,9 @@ data class TeamMemberResponse(
     @Schema(description = "User ID", example = "123e4567-e89b-12d3-a456-426614174000")
     val userId: UUID,
 
+    @Schema(description = "User full name", example = "Juan Pérez")
+    val userName: String?,
+
     @Schema(description = "Role of the member in the team", example = "LEAD_VOCALIST")
     val teamRole: TeamRole,
 

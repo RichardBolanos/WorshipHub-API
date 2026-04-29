@@ -46,7 +46,13 @@ data class ScheduleServiceRequest(
         description = "List of team member assignments with their roles", 
         required = true
     )
-    val memberAssignments: List<MemberAssignmentRequest>
+    val memberAssignments: List<MemberAssignmentRequest>,
+
+    @field:Valid
+    @Schema(
+        description = "Optional recurrence rule for creating a recurring service"
+    )
+    val recurrenceRule: RecurrenceRuleRequest? = null
 )
 
 @Schema(description = "Team member assignment with specific role for a service")

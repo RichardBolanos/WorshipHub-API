@@ -8,7 +8,9 @@ import com.worshiphub.domain.organization.repository.TeamRepository
 import com.worshiphub.domain.organization.repository.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.YearMonth
 import java.util.*
 
 /**
@@ -185,6 +187,254 @@ open class SchedulingApplicationService(
     }
     
     /**
+     * Creates a recurring service event and generates all child instances
+     * based on the recurrence rule.
+     *
+     * Business rules:
+     * - End date must be after start date
+     * - Max horizon is 52 weeks if no end date specified
+     * - MONTHLY with day 31 uses last day of shorter months
+     * - Each generated instance gets parentServiceId = parent's ID
+     */
+    @Transactional
+    open fun createRecurringService(command: CreateRecurringServiceCommand): Result<UUID> {
+        return try {
+            // Validate team exists
+            teamRepository.findById(command.teamId)
+                ?: return Result.failure(IllegalArgumentException("Team not found: ${command.teamId}"))
+
+            // Validate end date is after start date
+            val endDate = command.recurrenceRule.recurrenceEndDate
+            if (endDate != null && !endDate.isAfter(command.scheduledDate.toLocalDate())) {
+                return Result.failure(
+                    IllegalArgumentException(
+                        "La fecha de fin de recurrencia debe ser posterior a la fecha del culto"
+                    )
+                )
+            }
+
+            // Create parent service event with recurrence rule
+            val parentService = ServiceEvent(
+                name = command.serviceName,
+                scheduledDate = command.scheduledDate,
+                teamId = command.teamId,
+                churchId = command.churchId,
+                recurrenceRule = command.recurrenceRule
+            )
+            val savedParent = serviceEventRepository.save(parentService)
+
+            // Generate child instances
+            val dates = generateRecurrenceDates(
+                startDate = command.scheduledDate,
+                rule = command.recurrenceRule
+            )
+
+            for (date in dates) {
+                val childService = ServiceEvent(
+                    name = command.serviceName,
+                    scheduledDate = date,
+                    teamId = command.teamId,
+                    churchId = command.churchId,
+                    parentServiceId = savedParent.id
+                )
+                serviceEventRepository.save(childService)
+            }
+
+            Result.success(savedParent.id)
+        } catch (e: Exception) {
+            Result.failure(RuntimeException("Failed to create recurring service: ${e.message}", e))
+        }
+    }
+
+    /**
+     * Updates the recurrence rule for an existing recurring service.
+     * Only regenerates future instances that don't have ACCEPTED members.
+     * Instances with ACCEPTED members are preserved.
+     */
+    @Transactional
+    open fun updateRecurrenceRule(serviceId: UUID, newRule: RecurrenceRule): Result<Unit> {
+        return try {
+            val parentService = serviceEventRepository.findById(serviceId)
+                ?: return Result.failure(IllegalArgumentException("Service event not found: $serviceId"))
+
+            // Update parent with new rule
+            val updatedParent = parentService.copy(recurrenceRule = newRule)
+            serviceEventRepository.save(updatedParent)
+
+            // Get existing child instances
+            val children = serviceEventRepository.findByParentServiceId(serviceId)
+
+            // Separate: keep instances with ACCEPTED members, delete the rest that are in the future
+            val now = LocalDateTime.now()
+            val toDelete = children.filter { child ->
+                child.scheduledDate.isAfter(now) &&
+                    child.assignedMembers.none { it.confirmationStatus == ConfirmationStatus.ACCEPTED }
+            }
+            if (toDelete.isNotEmpty()) {
+                serviceEventRepository.deleteAll(toDelete)
+            }
+
+            // Generate new future instances based on new rule
+            val dates = generateRecurrenceDates(
+                startDate = parentService.scheduledDate,
+                rule = newRule
+            )
+
+            // Only create instances for dates that are in the future and not already covered
+            // by preserved (ACCEPTED) instances
+            val preservedDates = children
+                .filter { child ->
+                    child.scheduledDate.isAfter(now) &&
+                        child.assignedMembers.any { it.confirmationStatus == ConfirmationStatus.ACCEPTED }
+                }
+                .map { it.scheduledDate }
+                .toSet()
+
+            for (date in dates) {
+                if (date.isAfter(now) && date !in preservedDates) {
+                    val childService = ServiceEvent(
+                        name = parentService.name,
+                        scheduledDate = date,
+                        teamId = parentService.teamId,
+                        churchId = parentService.churchId,
+                        parentServiceId = serviceId
+                    )
+                    serviceEventRepository.save(childService)
+                }
+            }
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(RuntimeException("Failed to update recurrence rule: ${e.message}", e))
+        }
+    }
+
+    /**
+     * Deletes a recurring service and its child instances.
+     * Only deletes instances in DRAFT or PUBLISHED status without ACCEPTED members.
+     */
+    @Transactional
+    open fun deleteRecurringService(serviceId: UUID): Result<Unit> {
+        return try {
+            val parentService = serviceEventRepository.findById(serviceId)
+                ?: return Result.failure(IllegalArgumentException("Service event not found: $serviceId"))
+
+            val children = serviceEventRepository.findByParentServiceId(serviceId)
+
+            // Delete child instances that are DRAFT/PUBLISHED and have no ACCEPTED members
+            val deletable = children.filter { child ->
+                (child.status == ServiceEventStatus.DRAFT || child.status == ServiceEventStatus.PUBLISHED) &&
+                    child.assignedMembers.none { it.confirmationStatus == ConfirmationStatus.ACCEPTED }
+            }
+
+            if (deletable.isNotEmpty()) {
+                // Cascade-delete availability records for each deleted child
+                for (child in deletable) {
+                    userAvailabilityRepository.deleteByDateAndTeamMembers(
+                        child.scheduledDate.toLocalDate(),
+                        child.teamId
+                    )
+                }
+                serviceEventRepository.deleteAll(deletable)
+            }
+
+            // Delete parent if it also qualifies
+            if ((parentService.status == ServiceEventStatus.DRAFT || parentService.status == ServiceEventStatus.PUBLISHED) &&
+                parentService.assignedMembers.none { it.confirmationStatus == ConfirmationStatus.ACCEPTED }
+            ) {
+                userAvailabilityRepository.deleteByDateAndTeamMembers(
+                    parentService.scheduledDate.toLocalDate(),
+                    parentService.teamId
+                )
+                serviceEventRepository.delete(parentService)
+            }
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(RuntimeException("Failed to delete recurring service: ${e.message}", e))
+        }
+    }
+
+    /**
+     * Deletes an availability (unavailability) record.
+     * Returns 404 if not found, 403 if userId doesn't match.
+     */
+    @Transactional
+    open fun deleteAvailability(command: DeleteAvailabilityCommand): Result<Unit> {
+        val availability = userAvailabilityRepository.findById(command.availabilityId)
+            ?: return Result.failure(NoSuchElementException("Registro de indisponibilidad no encontrado"))
+
+        if (availability.userId != command.userId) {
+            return Result.failure(SecurityException("No tiene permiso para eliminar este registro"))
+        }
+
+        userAvailabilityRepository.delete(availability)
+        return Result.success(Unit)
+    }
+
+    /**
+     * Gets the current user's availability records, optionally filtered by date range,
+     * ordered by date ascending.
+     */
+    open fun getMyAvailability(command: GetMyAvailabilityCommand): List<UserAvailability> {
+        val records = if (command.startDate != null && command.endDate != null) {
+            userAvailabilityRepository.findByUserIdAndDateRange(
+                command.userId,
+                command.startDate,
+                command.endDate
+            )
+        } else {
+            userAvailabilityRepository.findByUserId(command.userId)
+        }
+        return records.sortedBy { it.unavailableDate }
+    }
+
+    /**
+     * Generates recurrence dates based on a start date and recurrence rule.
+     * Skips the first occurrence (the parent date) and generates subsequent dates.
+     * For MONTHLY with day > last day of month, uses last day of that month.
+     * Max horizon: recurrenceEndDate or 52 weeks from start.
+     */
+    internal fun generateRecurrenceDates(
+        startDate: LocalDateTime,
+        rule: RecurrenceRule
+    ): List<LocalDateTime> {
+        val dates = mutableListOf<LocalDateTime>()
+        val maxEnd = rule.recurrenceEndDate
+            ?: startDate.toLocalDate().plusWeeks(52)
+        val originalDay = startDate.dayOfMonth
+
+        var current = advanceDate(startDate, rule.frequency, originalDay)
+
+        while (!current.toLocalDate().isAfter(maxEnd)) {
+            dates.add(current)
+            current = advanceDate(current, rule.frequency, originalDay)
+        }
+
+        return dates
+    }
+
+    private fun advanceDate(
+        date: LocalDateTime,
+        frequency: RecurrenceFrequency,
+        originalDay: Int
+    ): LocalDateTime {
+        return when (frequency) {
+            RecurrenceFrequency.WEEKLY -> date.plusWeeks(1)
+            RecurrenceFrequency.MONTHLY -> {
+                val nextMonth = date.toLocalDate().plusMonths(1)
+                val yearMonth = YearMonth.of(nextMonth.year, nextMonth.month)
+                val day = minOf(originalDay, yearMonth.lengthOfMonth())
+                LocalDateTime.of(
+                    yearMonth.atDay(day),
+                    date.toLocalTime()
+                )
+            }
+            RecurrenceFrequency.YEARLY -> date.plusYears(1)
+        }
+    }
+
+    /**
      * Gets confirmation status for a service.
      */
     fun getServiceConfirmationStatus(serviceId: UUID): Result<List<AssignedMember>> {
@@ -229,9 +479,10 @@ open class SchedulingApplicationService(
         return services.map { service ->
             mapOf(
                 "id" to service.id.toString(),
-                "name" to service.name,
+                "serviceName" to service.name,
                 "scheduledDate" to service.scheduledDate.toString(),
                 "teamId" to service.teamId.toString(),
+                "setlistId" to (service.setlistId?.toString() ?: ""),
                 "status" to service.status.name
             )
         }

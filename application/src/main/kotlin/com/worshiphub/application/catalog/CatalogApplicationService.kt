@@ -7,6 +7,7 @@ import com.worshiphub.domain.catalog.Song
 import com.worshiphub.domain.catalog.Tag
 import com.worshiphub.domain.catalog.repository.AttachmentRepository
 import com.worshiphub.domain.catalog.repository.CategoryRepository
+import com.worshiphub.domain.catalog.repository.GlobalSongRepository
 import com.worshiphub.domain.catalog.repository.SongRepository
 import com.worshiphub.domain.catalog.repository.TagRepository
 import com.worshiphub.domain.collaboration.SongComment
@@ -23,7 +24,8 @@ open class CatalogApplicationService(
         private val categoryRepository: CategoryRepository,
         private val tagRepository: TagRepository,
         private val attachmentRepository: AttachmentRepository,
-        private val songCommentRepository: SongCommentRepository
+        private val songCommentRepository: SongCommentRepository,
+        private val globalSongRepository: GlobalSongRepository
 ) {
     private val log = LoggerFactory.getLogger(CatalogApplicationService::class.java)
 
@@ -307,23 +309,32 @@ open class CatalogApplicationService(
     }
 
     /**
-     * Searches global song catalog. TODO: Implement actual global catalog search when feature is
-     * ready
+     * Searches global song catalog by title or artist.
      */
     fun searchGlobalSongs(query: String): List<GlobalSong> {
-        // Global catalog feature not yet implemented
-        // Return empty list for now - this is expected behavior
-        return emptyList()
+        return globalSongRepository.searchByTitleOrArtist(query)
     }
 
     /**
-     * Imports a song from global catalog to church catalog. TODO: Implement actual global catalog
-     * import when feature is ready
+     * Imports a song from global catalog to church catalog.
+     * Finds the global song, creates a new Song in the church's catalog based on its data,
+     * and returns the new song's ID.
      */
     @Transactional
     fun importFromGlobal(globalSongId: UUID, churchId: UUID): UUID {
-        // Global catalog feature not yet implemented
-        // For now, throw exception to indicate feature unavailable
-        throw UnsupportedOperationException("Global catalog import feature is not yet implemented")
+        val globalSong = globalSongRepository.findById(globalSongId)
+            ?: throw IllegalArgumentException("Global song not found: $globalSongId")
+
+        val song = Song(
+            title = globalSong.title,
+            artist = globalSong.artist,
+            key = globalSong.key,
+            bpm = globalSong.bpm,
+            chords = globalSong.chords,
+            churchId = churchId
+        )
+
+        val savedSong = songRepository.save(song)
+        return savedSong.id
     }
 }
