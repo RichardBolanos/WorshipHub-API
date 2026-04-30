@@ -55,7 +55,7 @@ open class SchedulingApplicationService(
                 "Team already has a service scheduled within 2 hours of this time"
             }
             
-            // Create service event
+            // Create service event (without members first)
             var serviceEvent = ServiceEvent(
                 name = command.serviceName,
                 scheduledDate = command.scheduledDate,
@@ -64,7 +64,11 @@ open class SchedulingApplicationService(
                 churchId = command.churchId
             )
             
+            // Persist service event first to satisfy FK constraint
+            val savedServiceEvent = serviceEventRepository.save(serviceEvent)
+            
             // Validate and create member assignments
+            val assignments = mutableListOf<AssignedMember>()
             command.memberAssignments.forEach { assignment ->
                 // Validate user exists and belongs to the team
                 val user = userRepository.findById(assignment.userId)
@@ -81,21 +85,22 @@ open class SchedulingApplicationService(
                     )
                 }
                 
-                // Create assignment
-                val assignedMember = AssignedMember(
-                    serviceEventId = serviceEvent.id,
+                // Create assignment with the persisted service event ID
+                assignments.add(AssignedMember(
+                    serviceEventId = savedServiceEvent.id,
                     userId = assignment.userId,
                     role = assignment.role
-                )
-                
-                serviceEvent = serviceEvent.assignMember(assignedMember)
+                ))
             }
             
-            // Persist service event
-            val savedServiceEvent = serviceEventRepository.save(serviceEvent)
+            // Add members and save again
+            var withMembers = savedServiceEvent
+            for (member in assignments) {
+                withMembers = withMembers.assignMember(member)
+            }
             
             // Publish the service to make it visible to team members
-            val publishedService = savedServiceEvent.publish()
+            val publishedService = withMembers.publish()
             serviceEventRepository.save(publishedService)
             
             Result.success(publishedService.id)

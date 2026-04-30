@@ -3,6 +3,7 @@ package com.worshiphub.infrastructure.email
 import com.worshiphub.application.auth.EmailService
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.annotation.Profile
 import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.stereotype.Service
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service
  * Real emails will be sent (or routed to Mailpit in local environment).
  */
 @Service
+@Profile("!h2")
 class EmailServiceImpl(
     private val mailSender: JavaMailSender,
     @Value("\${app.base-url:http://localhost:8080}") private val baseUrl: String,
