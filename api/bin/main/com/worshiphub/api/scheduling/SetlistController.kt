@@ -113,7 +113,11 @@ class SetlistController(
         @Valid @RequestBody request: UpdateSetlistRequest,
         @Parameter(description = "Church ID", required = true) @RequestHeader("Church-Id") churchId: UUID
     ): Map<String, String> {
-        schedulingApplicationService.updateSetlist(id, request.name, request.description, request.songIds, request.estimatedDuration, churchId)
+        try {
+            schedulingApplicationService.updateSetlist(id, request.name, request.description, request.songIds, request.estimatedDuration, churchId)
+        } catch (e: IllegalArgumentException) {
+            throw org.springframework.web.server.ResponseStatusException(HttpStatus.BAD_REQUEST, e.message)
+        }
         return mapOf("message" to "Setlist updated successfully")
     }
     

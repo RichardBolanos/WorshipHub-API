@@ -40,6 +40,21 @@ data class AvailabilityResponse(
     val message: String = "Unavailability marked successfully"
 )
 
+@Schema(description = "User availability detail for GET /me")
+data class AvailabilityDetailResponse(
+    @Schema(description = "Availability record ID", example = "123e4567-e89b-12d3-a456-426614174000")
+    val id: UUID,
+    
+    @Schema(description = "Date when user is unavailable", example = "2025-01-15")
+    val unavailableDate: java.time.LocalDate,
+    
+    @Schema(description = "Reason for unavailability", example = "Viaje familiar")
+    val reason: String?,
+    
+    @Schema(description = "Timestamp when the record was created", example = "2025-01-10T14:30:00")
+    val createdAt: LocalDateTime
+)
+
 @Schema(description = "Team member confirmation status")
 data class ConfirmationStatusResponse(
     @Schema(description = "User ID", example = "123e4567-e89b-12d3-a456-426614174000")

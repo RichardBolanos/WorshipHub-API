@@ -58,13 +58,13 @@ class AuthController(
             }
             is AuthenticationResult.EmailNotVerified -> 
                 ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(mapOf("error" to "EMAIL_NOT_VERIFIED", "message" to "Email verification required. Please check your email and verify your account."))
+                    .body(mapOf("error" to "EMAIL_NOT_VERIFIED", "message" to "Email verification required. Please check your email and verify your account.", "statusCode" to 403))
             is AuthenticationResult.AccountInactive -> 
                 ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(mapOf("error" to "ACCOUNT_INACTIVE", "message" to "Account is inactive. Please verify your email to activate your account."))
+                    .body(mapOf("error" to "ACCOUNT_INACTIVE", "message" to "Account is inactive. Please verify your email to activate your account.", "statusCode" to 403))
             is AuthenticationResult.Failure -> 
                 ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(mapOf("error" to "INVALID_CREDENTIALS", "message" to result.message))
+                    .body(mapOf("error" to "INVALID_CREDENTIALS", "message" to result.message, "statusCode" to 401))
         }
     }
 

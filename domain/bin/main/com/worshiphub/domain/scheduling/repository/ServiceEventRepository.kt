@@ -14,5 +14,7 @@ interface ServiceEventRepository {
     fun findByTeamIdAndDateRange(teamId: UUID, startDate: LocalDateTime, endDate: LocalDateTime): List<ServiceEvent>
     fun findByChurchId(churchId: UUID): List<ServiceEvent>
     fun findUpcomingByTeamId(teamId: UUID): List<ServiceEvent>
+    fun findByParentServiceId(parentServiceId: UUID): List<ServiceEvent>
     fun delete(serviceEvent: ServiceEvent)
+    fun deleteAll(serviceEvents: List<ServiceEvent>)
 }

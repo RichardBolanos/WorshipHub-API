@@ -29,6 +29,20 @@ data class SendChatMessageDto(
     val content: String
 )
 
+@Schema(description = "REST request body for sending a chat message")
+data class SendChatMessageRestDto(
+    @field:NotBlank
+    @field:Size(min = 1, max = 1000, message = "Message must be between 1 and 1000 characters")
+    @Schema(
+        description = "Chat message content",
+        example = "Great practice today! See you all Sunday.",
+        required = true,
+        minLength = 1,
+        maxLength = 1000
+    )
+    val content: String
+)
+
 @Schema(description = "Chat message response with sender information and timestamp")
 data class ChatMessageResponseDto(
     @Schema(

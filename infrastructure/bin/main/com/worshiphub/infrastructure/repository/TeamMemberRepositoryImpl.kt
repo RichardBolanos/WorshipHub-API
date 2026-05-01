@@ -11,6 +11,8 @@ interface JpaTeamMemberRepository : JpaRepository<TeamMember, UUID> {
     fun findByTeamId(teamId: UUID): List<TeamMember>
     fun findByTeamIdAndUserId(teamId: UUID, userId: UUID): TeamMember?
     fun deleteByTeamIdAndUserId(teamId: UUID, userId: UUID)
+    fun deleteByTeamId(teamId: UUID)
+    fun countByTeamId(teamId: UUID): Int
 }
 
 @Repository
@@ -23,5 +25,7 @@ open class TeamMemberRepositoryImpl(
     override fun findByTeamId(teamId: UUID): List<TeamMember> = jpaRepository.findByTeamId(teamId)
     override fun findByTeamIdAndUserId(teamId: UUID, userId: UUID): TeamMember? = jpaRepository.findByTeamIdAndUserId(teamId, userId)
     override fun deleteByTeamIdAndUserId(teamId: UUID, userId: UUID) = jpaRepository.deleteByTeamIdAndUserId(teamId, userId)
+    override fun deleteByTeamId(teamId: UUID) = jpaRepository.deleteByTeamId(teamId)
+    override fun countByTeamId(teamId: UUID): Int = jpaRepository.countByTeamId(teamId)
     override fun delete(teamMember: TeamMember) = jpaRepository.delete(teamMember)
 }

@@ -10,5 +10,8 @@ data class CreateSongCommand(
         val bpm: Int?,
         val lyrics: String?,
         val chords: String?,
-        val churchId: UUID
+        val churchId: UUID,
+        val createdBy: UUID,  // User who is creating the song
+        val tagIds: List<UUID>? = null,
+        val categoryIds: List<UUID>? = null
 )

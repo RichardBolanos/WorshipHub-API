@@ -2,17 +2,18 @@ package com.worshiphub.application.catalog
 
 import com.worshiphub.domain.catalog.Attachment
 import com.worshiphub.domain.catalog.Category
-import com.worshiphub.domain.catalog.ChordTransposer
 import com.worshiphub.domain.catalog.GlobalSong
 import com.worshiphub.domain.catalog.Song
 import com.worshiphub.domain.catalog.Tag
 import com.worshiphub.domain.catalog.repository.AttachmentRepository
 import com.worshiphub.domain.catalog.repository.CategoryRepository
+import com.worshiphub.domain.catalog.repository.GlobalSongRepository
 import com.worshiphub.domain.catalog.repository.SongRepository
 import com.worshiphub.domain.catalog.repository.TagRepository
 import com.worshiphub.domain.collaboration.SongComment
 import com.worshiphub.domain.collaboration.repository.SongCommentRepository
 import java.util.*
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -23,8 +24,10 @@ open class CatalogApplicationService(
         private val categoryRepository: CategoryRepository,
         private val tagRepository: TagRepository,
         private val attachmentRepository: AttachmentRepository,
-        private val songCommentRepository: SongCommentRepository
+        private val songCommentRepository: SongCommentRepository,
+        private val globalSongRepository: GlobalSongRepository
 ) {
+    private val log = LoggerFactory.getLogger(CatalogApplicationService::class.java)
 
     /** Creates a new song in the catalog. */
     @Transactional
@@ -53,7 +56,31 @@ open class CatalogApplicationService(
                             churchId = command.churchId
                     )
 
-            val savedSong = songRepository.save(song)
+            // Resolve tags if provided
+            val tags = command.tagIds?.let { ids ->
+                val found = ids.mapNotNull { tagRepository.findById(it) }.toSet()
+                if (found.size != ids.size) {
+                    val foundIds = found.map { it.id }.toSet()
+                    val invalidIds = ids.filter { it !in foundIds }
+                    return Result.failure(IllegalArgumentException("Invalid tag IDs: $invalidIds"))
+                }
+                found
+            } ?: emptySet()
+
+            // Resolve categories if provided
+            val categories = command.categoryIds?.let { ids ->
+                val found = ids.mapNotNull { categoryRepository.findById(it) }.toSet()
+                if (found.size != ids.size) {
+                    val foundIds = found.map { it.id }.toSet()
+                    val invalidIds = ids.filter { it !in foundIds }
+                    return Result.failure(IllegalArgumentException("Invalid category IDs: $invalidIds"))
+                }
+                found
+            } ?: emptySet()
+
+            val songWithAssociations = song.copy(tags = tags, categories = categories)
+            val savedSong = songRepository.save(songWithAssociations)
+            
             Result.success(savedSong)
         } catch (e: Exception) {
             Result.failure(RuntimeException("Failed to create song", e))
@@ -61,6 +88,7 @@ open class CatalogApplicationService(
     }
 
     /** Gets a single song by its ID. */
+    @Transactional(readOnly = true)
     fun getSongById(songId: UUID): Result<Song> {
         return try {
             val song =
@@ -74,35 +102,21 @@ open class CatalogApplicationService(
         }
     }
 
-    /** Transposes song chords to a different key. */
-    fun transposeSong(songId: UUID, toKey: String): Result<String> {
-        return try {
-            val song =
-                    songRepository.findById(songId)
-                            ?: return Result.failure(
-                                    IllegalArgumentException("Song not found: $songId")
-                            )
-
-            val transposed =
-                    song.chords?.let { ChordTransposer.transpose(it, song.key ?: "", toKey) } ?: ""
-
-            Result.success(transposed)
-        } catch (e: Exception) {
-            Result.failure(RuntimeException("Failed to transpose song", e))
-        }
-    }
-
     /** Gets all songs for a church. */
+    @Transactional(readOnly = true)
     fun getAllSongs(churchId: UUID, page: Int, size: Int): Result<List<Song>> {
         return try {
             val songs = songRepository.findByChurchId(churchId, page, size)
+            log.info("getAllSongs returned {} songs for church {}", songs.size, churchId)
             Result.success(songs)
         } catch (e: Exception) {
+            log.error("getAllSongs FAILED for church {}: {} - {}", churchId, e.javaClass.name, e.message, e)
             Result.failure(RuntimeException("Failed to retrieve songs", e))
         }
     }
 
     /** Searches songs by title or artist. */
+    @Transactional(readOnly = true)
     fun searchSongs(query: String, churchId: UUID, page: Int, size: Int): Result<List<Song>> {
         return try {
             val songs = songRepository.searchByTitleOrArtist(query, churchId, page, size)
@@ -122,6 +136,36 @@ open class CatalogApplicationService(
                                     IllegalArgumentException("Song not found: $songId")
                             )
 
+            // Resolve tags: null = keep existing, empty = remove all, values = resolve
+            val tags = command.tagIds?.let { ids ->
+                if (ids.isEmpty()) {
+                    emptySet()
+                } else {
+                    val found = ids.mapNotNull { tagRepository.findById(it) }.toSet()
+                    if (found.size != ids.size) {
+                        val foundIds = found.map { it.id }.toSet()
+                        val invalidIds = ids.filter { it !in foundIds }
+                        return Result.failure(IllegalArgumentException("Invalid tag IDs: $invalidIds"))
+                    }
+                    found
+                }
+            } ?: existingSong.tags
+
+            // Resolve categories: null = keep existing, empty = remove all, values = resolve
+            val categories = command.categoryIds?.let { ids ->
+                if (ids.isEmpty()) {
+                    emptySet()
+                } else {
+                    val found = ids.mapNotNull { categoryRepository.findById(it) }.toSet()
+                    if (found.size != ids.size) {
+                        val foundIds = found.map { it.id }.toSet()
+                        val invalidIds = ids.filter { it !in foundIds }
+                        return Result.failure(IllegalArgumentException("Invalid category IDs: $invalidIds"))
+                    }
+                    found
+                }
+            } ?: existingSong.categories
+
             val updatedSong =
                     existingSong.copy(
                             title = command.title,
@@ -129,7 +173,9 @@ open class CatalogApplicationService(
                             key = command.key ?: existingSong.key,
                             bpm = command.bpm ?: existingSong.bpm,
                             lyrics = command.lyrics ?: existingSong.lyrics,
-                            chords = command.chords ?: existingSong.chords
+                            chords = command.chords ?: existingSong.chords,
+                            tags = tags,
+                            categories = categories
                     )
 
             songRepository.save(updatedSong)
@@ -156,6 +202,7 @@ open class CatalogApplicationService(
         }
     }
 
+    @Transactional(readOnly = true)
     fun filterSongs(categoryId: UUID?, tagIds: List<UUID>, churchId: UUID): List<Song> {
         return songRepository.filterByCategory(categoryId, tagIds, churchId)
     }
@@ -167,6 +214,7 @@ open class CatalogApplicationService(
     }
     
     /** Gets all categories for a church. */
+    @Transactional(readOnly = true)
     fun getAllCategories(churchId: UUID): List<Category> {
         return categoryRepository.findByChurchId(churchId)
     }
@@ -190,6 +238,7 @@ open class CatalogApplicationService(
     }
     
     /** Gets all tags for a church. */
+    @Transactional(readOnly = true)
     fun getAllTags(churchId: UUID): List<Tag> {
         return tagRepository.findByChurchId(churchId)
     }
@@ -210,7 +259,7 @@ open class CatalogApplicationService(
     @Transactional
     fun assignCategoriesToSong(songId: UUID, categoryIds: List<UUID>) {
         val song = songRepository.findById(songId) ?: throw IllegalArgumentException("Song not found")
-        val categories = categoryIds.mapNotNull { categoryRepository.findById(it) }
+        val categories = categoryIds.mapNotNull { categoryRepository.findById(it) }.toSet()
         val updated = song.copy(categories = categories)
         songRepository.save(updated)
     }
@@ -219,7 +268,7 @@ open class CatalogApplicationService(
     @Transactional
     fun assignTagsToSong(songId: UUID, tagIds: List<UUID>) {
         val song = songRepository.findById(songId) ?: throw IllegalArgumentException("Song not found")
-        val tags = tagIds.mapNotNull { tagRepository.findById(it) }
+        val tags = tagIds.mapNotNull { tagRepository.findById(it) }.toSet()
         val updated = song.copy(tags = tags)
         songRepository.save(updated)
     }
@@ -254,28 +303,38 @@ open class CatalogApplicationService(
     }
 
     /** Gets comments for a song. */
+    @Transactional(readOnly = true)
     fun getSongComments(songId: UUID): List<SongComment> {
         return songCommentRepository.findBySongId(songId)
     }
 
     /**
-     * Searches global song catalog. TODO: Implement actual global catalog search when feature is
-     * ready
+     * Searches global song catalog by title or artist.
      */
     fun searchGlobalSongs(query: String): List<GlobalSong> {
-        // Global catalog feature not yet implemented
-        // Return empty list for now - this is expected behavior
-        return emptyList()
+        return globalSongRepository.searchByTitleOrArtist(query)
     }
 
     /**
-     * Imports a song from global catalog to church catalog. TODO: Implement actual global catalog
-     * import when feature is ready
+     * Imports a song from global catalog to church catalog.
+     * Finds the global song, creates a new Song in the church's catalog based on its data,
+     * and returns the new song's ID.
      */
     @Transactional
     fun importFromGlobal(globalSongId: UUID, churchId: UUID): UUID {
-        // Global catalog feature not yet implemented
-        // For now, throw exception to indicate feature unavailable
-        throw UnsupportedOperationException("Global catalog import feature is not yet implemented")
+        val globalSong = globalSongRepository.findById(globalSongId)
+            ?: throw IllegalArgumentException("Global song not found: $globalSongId")
+
+        val song = Song(
+            title = globalSong.title,
+            artist = globalSong.artist,
+            key = globalSong.key,
+            bpm = globalSong.bpm,
+            chords = globalSong.chords,
+            churchId = churchId
+        )
+
+        val savedSong = songRepository.save(song)
+        return savedSong.id
     }
 }

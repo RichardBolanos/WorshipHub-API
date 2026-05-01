@@ -29,7 +29,8 @@ class OAuth2Controller(
             val decodedBytes = Base64.getUrlDecoder().decode(payload)
             val payloadJson = String(decodedBytes)
             
-            objectMapper.readValue(payloadJson, Map::class.java) as Map<String, Any>
+            @Suppress("UNCHECKED_CAST")
+            objectMapper.readValue(payloadJson, Map::class.java) as? Map<String, Any>
         } catch (e: Exception) {
             null
         }

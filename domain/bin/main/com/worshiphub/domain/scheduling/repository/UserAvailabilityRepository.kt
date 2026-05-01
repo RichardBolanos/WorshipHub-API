@@ -13,5 +13,7 @@ interface UserAvailabilityRepository {
     fun findById(id: UUID): UserAvailability?
     fun findByUserIdAndDate(userId: UUID, date: LocalDate): UserAvailability?
     fun findByUserId(userId: UUID): List<UserAvailability>
+    fun findByUserIdAndDateRange(userId: UUID, startDate: LocalDate, endDate: LocalDate): List<UserAvailability>
     fun delete(availability: UserAvailability)
+    fun deleteByDateAndTeamMembers(date: LocalDate, teamId: UUID)
 }

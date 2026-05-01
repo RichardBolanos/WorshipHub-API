@@ -44,18 +44,34 @@ open class SongRepositoryImpl(private val jpaRepository: JpaSongRepository) : So
 
     override fun save(song: Song): Song = jpaRepository.save(song)
 
-    override fun findById(id: UUID): Song? = jpaRepository.findById(id).orElse(null)
+    override fun findById(id: UUID): Song? {
+        val songs = jpaRepository.findAllWithCollections(listOf(id))
+        return songs.firstOrNull()
+    }
 
-    override fun findByChurchId(churchId: UUID, page: Int, size: Int): List<Song> =
-            jpaRepository.findByChurchId(churchId, PageRequest.of(page, size)).content
+    override fun findByChurchId(churchId: UUID, page: Int, size: Int): List<Song> {
+        val pageResult = jpaRepository.findByChurchId(churchId, PageRequest.of(page, size))
+        if (pageResult.isEmpty) return emptyList()
+        val ids = pageResult.content.map { it.id }
+        val songsWithCollections = jpaRepository.findAllWithCollections(ids)
+        // Preserve original page order
+        val songMap = songsWithCollections.associateBy { it.id }
+        return ids.mapNotNull { songMap[it] }
+    }
 
     override fun searchByTitleOrArtist(
             query: String,
             churchId: UUID,
             page: Int,
             size: Int
-    ): List<Song> =
-            jpaRepository.searchByTitleOrArtist(query, churchId, PageRequest.of(page, size)).content
+    ): List<Song> {
+        val pageResult = jpaRepository.searchByTitleOrArtist(query, churchId, PageRequest.of(page, size))
+        if (pageResult.isEmpty) return emptyList()
+        val ids = pageResult.content.map { it.id }
+        val songsWithCollections = jpaRepository.findAllWithCollections(ids)
+        val songMap = songsWithCollections.associateBy { it.id }
+        return ids.mapNotNull { songMap[it] }
+    }
 
     override fun filterByCategory(
             categoryId: UUID?,

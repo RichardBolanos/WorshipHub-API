@@ -17,6 +17,8 @@ interface JpaServiceEventRepository : JpaRepository<ServiceEvent, UUID> {
     
     @Query("SELECT s FROM ServiceEvent s WHERE s.teamId = :teamId AND s.scheduledDate > CURRENT_TIMESTAMP ORDER BY s.scheduledDate")
     fun findUpcomingByTeamId(teamId: UUID): List<ServiceEvent>
+    
+    fun findByParentServiceId(parentServiceId: UUID): List<ServiceEvent>
 }
 
 @Repository
@@ -35,5 +37,10 @@ open class ServiceEventRepositoryImpl(
     
     override fun findUpcomingByTeamId(teamId: UUID): List<ServiceEvent> = jpaRepository.findUpcomingByTeamId(teamId)
     
+    override fun findByParentServiceId(parentServiceId: UUID): List<ServiceEvent> = 
+        jpaRepository.findByParentServiceId(parentServiceId)
+    
     override fun delete(serviceEvent: ServiceEvent) = jpaRepository.delete(serviceEvent)
+    
+    override fun deleteAll(serviceEvents: List<ServiceEvent>) = jpaRepository.deleteAll(serviceEvents)
 }

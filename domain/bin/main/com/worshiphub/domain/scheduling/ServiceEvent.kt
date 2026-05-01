@@ -49,7 +49,13 @@ data class ServiceEvent(
     val churchId: UUID,
     
     @Column(nullable = false)
-    val createdAt: LocalDateTime = LocalDateTime.now()
+    val createdAt: LocalDateTime = LocalDateTime.now(),
+    
+    @Embedded
+    val recurrenceRule: RecurrenceRule? = null,
+    
+    @Column
+    val parentServiceId: UUID? = null,
 ) {
     
     /**

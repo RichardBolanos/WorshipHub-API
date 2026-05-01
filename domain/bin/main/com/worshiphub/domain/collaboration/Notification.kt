@@ -48,6 +48,12 @@ data class Notification(
 enum class NotificationType {
     SERVICE_INVITATION,
     NEW_SONG,
+    SONG_ADDED,           // When a new song is added to catalog
     NEW_COMMENT,
-    TEAM_ASSIGNMENT
+    TEAM_ASSIGNMENT,
+    SERVICE_SCHEDULED,    // When a service is scheduled with team members
+    TEAM_MEMBER_ADDED,
+    TEAM_MEMBER_REMOVED,
+    TEAM_ROLE_CHANGED,
+    TEAM_LEADER_CHANGED
 }

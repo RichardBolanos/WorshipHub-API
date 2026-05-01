@@ -2,7 +2,6 @@ package com.worshiphub.security
 
 import com.worshiphub.application.auth.JwtTokenService
 import io.jsonwebtoken.Jwts
-import io.jsonwebtoken.SignatureAlgorithm
 import io.jsonwebtoken.security.Keys
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
@@ -49,14 +48,14 @@ class JwtTokenProvider : JwtTokenService {
             val jti = UUID.randomUUID().toString() // Unique token ID
 
             Jwts.builder()
-                .setSubject(userId)
-                .setId(jti)
+                .subject(userId)
+                .id(jti)
                 .claim("churchId", churchId)
                 .claim("roles", roles.take(10)) // Limit roles to prevent token bloat
-                .setIssuedAt(now)
-                .setExpiration(expiryDate)
-                .setIssuer("WorshipHub")
-                .signWith(secretKey, SignatureAlgorithm.HS256)
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .issuer("WorshipHub")
+                .signWith(secretKey)
                 .compact()
         } catch (e: Exception) {
             throw IllegalStateException("Failed to generate JWT token", e)

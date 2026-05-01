@@ -254,7 +254,7 @@ server:
   port: 9090
 ```
 
-#### Perfil H2 (Desarrollo rápido)
+#### Perfil H2 (Desarrollo rápido / E2E tests)
 
 ```yaml
 # application-h2.yml
@@ -266,6 +266,8 @@ spring:
       enabled: true
       path: /h2-console
 ```
+
+> **Servicios de email por perfil:** El perfil `h2` activa `NoOpEmailService` (`@Profile("h2") @Primary`) que simula el envío de emails sin conexión SMTP. La implementación real `EmailServiceImpl` se excluye automáticamente mediante `@Profile("!h2")`. Esto permite que los tests E2E y el desarrollo rápido funcionen sin configurar un servidor de correo. En los demás perfiles (`local`, `prod`, etc.), se usa `EmailServiceImpl` con JavaMailSender (Mailpit en local, SMTP real en producción).
 
 ## 🎮 Ejecución
 
