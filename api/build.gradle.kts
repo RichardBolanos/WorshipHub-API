@@ -3,7 +3,7 @@ plugins {
     kotlin("plugin.spring")
     id("org.springframework.boot")
     id("io.spring.dependency-management")
-    id("org.graalvm.buildtools.native") version "0.10.3"
+    id("org.graalvm.buildtools.native")
 }
 
 java {
@@ -26,7 +26,7 @@ kotlin {
 
 dependencyManagement {
     imports {
-        mavenBom("org.springframework.boot:spring-boot-dependencies:3.3.5")
+        mavenBom("org.springframework.boot:spring-boot-dependencies:3.5.5")
     }
 }
 
@@ -47,10 +47,9 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
-    implementation("io.jsonwebtoken:jjwt-api:0.12.3")
-    implementation("io.jsonwebtoken:jjwt-impl:0.12.3")
-    implementation("io.jsonwebtoken:jjwt-jackson:0.12.3")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17")
+    // nimbus-jose-jwt: GraalVM native-image compatible (comes with spring-security-oauth2-jose)
+    implementation("org.springframework.security:spring-security-oauth2-jose")
     
     // Development tools
     developmentOnly("org.springframework.boot:spring-boot-devtools")
@@ -113,18 +112,8 @@ tasks.named<org.springframework.boot.gradle.tasks.bundling.BootBuildImage>("boot
 graalvmNative {
     binaries {
         named("main") {
-            buildArgs.add("--initialize-at-build-time=org.slf4j")
+            mainClass.set("com.worshiphub.WorshipHubApplicationKt")
             buildArgs.add("-H:+ReportExceptionStackTraces")
-            buildArgs.add("-H:+AddAllCharsets")
-            buildArgs.add("-H:IncludeResourceBundles=messages")
-            buildArgs.add("--enable-url-protocols=http,https")
-            buildArgs.add("--allow-incomplete-classpath")
-            buildArgs.add("-H:+UnlockExperimentalVMOptions")
-            buildArgs.add("-H:+UseServiceLoaderFeature")
-            
-            // Optimizaciones para Spring Boot
-            buildArgs.add("--initialize-at-build-time=org.springframework.util.unit.DataSize")
-            buildArgs.add("--initialize-at-build-time=org.springframework.boot.logging.LoggingSystem")
         }
     }
 }
