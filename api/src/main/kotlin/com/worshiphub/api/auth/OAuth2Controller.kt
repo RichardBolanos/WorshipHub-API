@@ -4,6 +4,7 @@ import com.worshiphub.application.auth.OAuth2AuthenticationService
 import com.worshiphub.application.auth.OAuth2LoginResult
 import com.worshiphub.application.auth.PendingInvitationDto
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.security.SecurityRequirements
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -40,6 +41,7 @@ class OAuth2Controller(
         summary = "Handle Google OAuth2 callback",
         description = "Processes Google OAuth2 authentication and handles pending invitations"
     )
+    @SecurityRequirements // No security required — public endpoint
     @GetMapping("/google/callback")
     fun handleGoogleCallback(
         @RequestParam("id_token") idToken: String?
@@ -104,6 +106,7 @@ class OAuth2Controller(
         summary = "Accept invitation after OAuth2 login",
         description = "Accepts a pending invitation and completes user registration"
     )
+    @SecurityRequirements // No security required — public endpoint
     @PostMapping("/accept-invitation/{invitationId}")
     fun acceptInvitation(
         @PathVariable invitationId: String,

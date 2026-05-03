@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.security.SecurityRequirements
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
@@ -30,6 +31,7 @@ class PasswordResetController(
         ApiResponse(responseCode = "200", description = "Password reset email sent (or email not found - no disclosure)"),
         ApiResponse(responseCode = "400", description = "Invalid email format")
     ])
+    @SecurityRequirements // No security required — public endpoint
     @PostMapping("/forgot")
     fun forgotPassword(@Valid @RequestBody request: ForgotPasswordRequest): ResponseEntity<MessageResponse> {
         passwordResetService.initiatePasswordReset(request.email)
@@ -45,6 +47,7 @@ class PasswordResetController(
         ApiResponse(responseCode = "200", description = "Token is valid"),
         ApiResponse(responseCode = "400", description = "Invalid or expired token")
     ])
+    @SecurityRequirements // No security required — public endpoint
     @GetMapping("/reset/{token}/validate")
     fun validateResetToken(
         @Parameter(description = "Password reset token", required = true)
@@ -72,6 +75,7 @@ class PasswordResetController(
         ApiResponse(responseCode = "400", description = "Invalid token or password requirements not met"),
         ApiResponse(responseCode = "404", description = "User not found")
     ])
+    @SecurityRequirements // No security required — public endpoint
     @PostMapping("/reset")
     fun resetPassword(@Valid @RequestBody request: ResetPasswordRequest): ResponseEntity<MessageResponse> {
         return when (val result = passwordResetService.resetPassword(request.token, request.newPassword)) {
