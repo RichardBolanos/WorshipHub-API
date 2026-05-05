@@ -24,7 +24,6 @@ import java.util.*
 @Table(name = "invitation_tokens")
 data class InvitationToken(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
     
     @Column(nullable = false, unique = true)

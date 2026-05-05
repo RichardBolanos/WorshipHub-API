@@ -3,6 +3,7 @@ package com.worshiphub.infrastructure.repository
 import com.worshiphub.domain.scheduling.ServiceEvent
 import com.worshiphub.domain.scheduling.ServiceEventStatus
 import com.worshiphub.domain.scheduling.repository.ServiceEventRepository
+import jakarta.persistence.EntityManager
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
@@ -30,10 +31,18 @@ interface JpaServiceEventRepository : JpaRepository<ServiceEvent, UUID> {
 
 @Repository
 open class ServiceEventRepositoryImpl(
-    private val jpaRepository: JpaServiceEventRepository
+    private val jpaRepository: JpaServiceEventRepository,
+    private val entityManager: EntityManager
 ) : ServiceEventRepository {
     
-    override fun save(serviceEvent: ServiceEvent): ServiceEvent = jpaRepository.save(serviceEvent)
+    override fun save(serviceEvent: ServiceEvent): ServiceEvent {
+        return if (jpaRepository.existsById(serviceEvent.id)) {
+            jpaRepository.save(serviceEvent)
+        } else {
+            entityManager.persist(serviceEvent)
+            serviceEvent
+        }
+    }
     
     override fun findById(id: UUID): ServiceEvent? = jpaRepository.findById(id).orElse(null)
     

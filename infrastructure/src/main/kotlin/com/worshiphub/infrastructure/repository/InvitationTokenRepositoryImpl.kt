@@ -2,6 +2,7 @@ package com.worshiphub.infrastructure.repository
 
 import com.worshiphub.domain.auth.InvitationToken
 import com.worshiphub.domain.auth.repository.InvitationTokenRepository
+import jakarta.persistence.EntityManager
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
@@ -28,10 +29,18 @@ interface JpaInvitationTokenRepository : JpaRepository<InvitationToken, UUID> {
 
 @Repository
 open class InvitationTokenRepositoryImpl(
-    private val jpaRepository: JpaInvitationTokenRepository
+    private val jpaRepository: JpaInvitationTokenRepository,
+    private val entityManager: EntityManager
 ) : InvitationTokenRepository {
     
-    override fun save(invitation: InvitationToken): InvitationToken = jpaRepository.save(invitation)
+    override fun save(invitation: InvitationToken): InvitationToken {
+        return if (jpaRepository.existsById(invitation.id)) {
+            jpaRepository.save(invitation)
+        } else {
+            entityManager.persist(invitation)
+            invitation
+        }
+    }
     
     override fun findById(id: UUID): InvitationToken? = jpaRepository.findById(id).orElse(null)
     

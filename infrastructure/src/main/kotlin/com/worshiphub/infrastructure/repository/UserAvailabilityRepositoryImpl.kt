@@ -2,6 +2,7 @@ package com.worshiphub.infrastructure.repository
 
 import com.worshiphub.domain.scheduling.UserAvailability
 import com.worshiphub.domain.scheduling.repository.UserAvailabilityRepository
+import jakarta.persistence.EntityManager
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import java.time.LocalDate
@@ -17,10 +18,18 @@ interface JpaUserAvailabilityRepository : JpaRepository<UserAvailability, UUID> 
 @Repository
 open class UserAvailabilityRepositoryImpl(
     private val jpaRepository: JpaUserAvailabilityRepository,
-    private val jpaTeamMemberRepository: JpaTeamMemberRepository
+    private val jpaTeamMemberRepository: JpaTeamMemberRepository,
+    private val entityManager: EntityManager
 ) : UserAvailabilityRepository {
     
-    override fun save(availability: UserAvailability): UserAvailability = jpaRepository.save(availability)
+    override fun save(availability: UserAvailability): UserAvailability {
+        return if (jpaRepository.existsById(availability.id)) {
+            jpaRepository.save(availability)
+        } else {
+            entityManager.persist(availability)
+            availability
+        }
+    }
     
     override fun findById(id: UUID): UserAvailability? = jpaRepository.findById(id).orElse(null)
     

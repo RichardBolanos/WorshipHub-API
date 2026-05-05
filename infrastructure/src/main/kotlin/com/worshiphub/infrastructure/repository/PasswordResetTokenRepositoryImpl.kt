@@ -2,6 +2,7 @@ package com.worshiphub.infrastructure.repository
 
 import com.worshiphub.domain.auth.PasswordResetToken
 import com.worshiphub.domain.auth.repository.PasswordResetTokenRepository
+import jakarta.persistence.EntityManager
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
@@ -26,10 +27,18 @@ interface JpaPasswordResetTokenRepository : JpaRepository<PasswordResetToken, UU
 
 @Repository
 open class PasswordResetTokenRepositoryImpl(
-    private val jpaRepository: JpaPasswordResetTokenRepository
+    private val jpaRepository: JpaPasswordResetTokenRepository,
+    private val entityManager: EntityManager
 ) : PasswordResetTokenRepository {
     
-    override fun save(token: PasswordResetToken): PasswordResetToken = jpaRepository.save(token)
+    override fun save(token: PasswordResetToken): PasswordResetToken {
+        return if (jpaRepository.existsById(token.id)) {
+            jpaRepository.save(token)
+        } else {
+            entityManager.persist(token)
+            token
+        }
+    }
     
     override fun findByToken(token: String): PasswordResetToken? = jpaRepository.findByToken(token)
     

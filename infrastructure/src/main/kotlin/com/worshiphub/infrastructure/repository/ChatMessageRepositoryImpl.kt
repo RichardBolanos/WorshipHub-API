@@ -2,6 +2,7 @@ package com.worshiphub.infrastructure.repository
 
 import com.worshiphub.domain.collaboration.ChatMessage
 import com.worshiphub.domain.collaboration.repository.ChatMessageRepository
+import jakarta.persistence.EntityManager
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
@@ -19,10 +20,18 @@ interface JpaChatMessageRepository : JpaRepository<ChatMessage, UUID> {
 
 @Repository
 open class ChatMessageRepositoryImpl(
-    private val jpaRepository: JpaChatMessageRepository
+    private val jpaRepository: JpaChatMessageRepository,
+    private val entityManager: EntityManager
 ) : ChatMessageRepository {
     
-    override fun save(message: ChatMessage): ChatMessage = jpaRepository.save(message)
+    override fun save(message: ChatMessage): ChatMessage {
+        return if (jpaRepository.existsById(message.id)) {
+            jpaRepository.save(message)
+        } else {
+            entityManager.persist(message)
+            message
+        }
+    }
     
     override fun findByTeamIdOrderByCreatedAtDesc(teamId: UUID, limit: Int): List<ChatMessage> =
         jpaRepository.findByTeamIdOrderByCreatedAtDesc(teamId, limit)

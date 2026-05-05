@@ -17,7 +17,6 @@ import java.util.*
 @Table(name = "song_comments")
 data class SongComment(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
     
     @Column(nullable = false)

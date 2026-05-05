@@ -19,7 +19,6 @@ import java.util.*
 @Table(name = "assigned_members")
 data class AssignedMember(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
     
     @Column(name = "service_event_id", nullable = false)

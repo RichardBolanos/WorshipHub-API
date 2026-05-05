@@ -17,7 +17,6 @@ import java.util.*
 @Table(name = "chat_messages")
 data class ChatMessage(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
     
     @Column(nullable = false)

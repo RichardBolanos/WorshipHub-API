@@ -11,7 +11,6 @@ import java.util.*
 @Table(name = "error_logs")
 data class ErrorLog(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
     
     @Column(name = "error_hash", unique = true, nullable = false)

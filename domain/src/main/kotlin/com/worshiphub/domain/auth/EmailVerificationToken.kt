@@ -19,7 +19,6 @@ import java.util.*
 @Table(name = "email_verification_tokens")
 data class EmailVerificationToken(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
     
     @Column(nullable = false)

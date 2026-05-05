@@ -2,6 +2,7 @@ package com.worshiphub.infrastructure.repository
 
 import com.worshiphub.domain.catalog.GlobalSong
 import com.worshiphub.domain.catalog.repository.GlobalSongRepository
+import jakarta.persistence.EntityManager
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
@@ -17,10 +18,18 @@ interface JpaGlobalSongRepository : JpaRepository<GlobalSong, UUID> {
 
 @Repository
 open class GlobalSongRepositoryImpl(
-    private val jpaRepository: JpaGlobalSongRepository
+    private val jpaRepository: JpaGlobalSongRepository,
+    private val entityManager: EntityManager
 ) : GlobalSongRepository {
 
-    override fun save(globalSong: GlobalSong): GlobalSong = jpaRepository.save(globalSong)
+    override fun save(globalSong: GlobalSong): GlobalSong {
+        return if (jpaRepository.existsById(globalSong.id)) {
+            jpaRepository.save(globalSong)
+        } else {
+            entityManager.persist(globalSong)
+            globalSong
+        }
+    }
 
     override fun findById(id: UUID): GlobalSong? = jpaRepository.findById(id).orElse(null)
 

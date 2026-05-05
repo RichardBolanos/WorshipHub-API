@@ -17,7 +17,6 @@ import java.util.*
 @Table(name = "team_members")
 data class TeamMember(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
     
     @Column(nullable = false)

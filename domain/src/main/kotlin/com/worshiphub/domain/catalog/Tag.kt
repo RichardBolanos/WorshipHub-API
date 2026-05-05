@@ -15,7 +15,6 @@ import java.util.*
 @Table(name = "tags")
 data class Tag(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
     
     @Column(nullable = false, length = 50)

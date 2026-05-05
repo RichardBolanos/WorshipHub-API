@@ -23,7 +23,6 @@ import java.util.*
 @Table(name = "device_tokens")
 data class DeviceToken(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
 
     @Column(nullable = false)

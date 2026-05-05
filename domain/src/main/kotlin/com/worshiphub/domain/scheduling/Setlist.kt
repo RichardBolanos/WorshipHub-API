@@ -18,7 +18,6 @@ import java.util.*
 @Table(name = "setlists")
 data class Setlist(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
     
     @Column(nullable = false, length = 100)

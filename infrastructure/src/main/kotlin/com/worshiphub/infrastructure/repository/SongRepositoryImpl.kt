@@ -2,6 +2,7 @@ package com.worshiphub.infrastructure.repository
 
 import com.worshiphub.domain.catalog.Song
 import com.worshiphub.domain.catalog.repository.SongRepository
+import jakarta.persistence.EntityManager
 import java.util.*
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
@@ -40,9 +41,19 @@ interface JpaSongRepository : JpaRepository<Song, UUID> {
 }
 
 @Repository
-open class SongRepositoryImpl(private val jpaRepository: JpaSongRepository) : SongRepository {
+open class SongRepositoryImpl(
+    private val jpaRepository: JpaSongRepository,
+    private val entityManager: EntityManager
+) : SongRepository {
 
-    override fun save(song: Song): Song = jpaRepository.save(song)
+    override fun save(song: Song): Song {
+        return if (jpaRepository.existsById(song.id)) {
+            jpaRepository.save(song)
+        } else {
+            entityManager.persist(song)
+            song
+        }
+    }
 
     override fun findById(id: UUID): Song? {
         val songs = jpaRepository.findAllWithCollections(listOf(id))

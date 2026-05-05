@@ -15,7 +15,6 @@ import java.util.*
 @Table(name = "categories")
 data class Category(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
     
     @Column(nullable = false, length = 50)

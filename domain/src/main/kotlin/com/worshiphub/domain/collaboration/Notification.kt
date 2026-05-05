@@ -21,7 +21,6 @@ import java.util.*
 @Table(name = "notifications")
 data class Notification(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
     
     @Column(nullable = false)

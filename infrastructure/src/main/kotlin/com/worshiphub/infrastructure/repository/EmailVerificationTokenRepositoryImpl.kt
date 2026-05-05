@@ -2,6 +2,7 @@ package com.worshiphub.infrastructure.repository
 
 import com.worshiphub.domain.auth.EmailVerificationToken
 import com.worshiphub.domain.auth.repository.EmailVerificationTokenRepository
+import jakarta.persistence.EntityManager
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
@@ -26,10 +27,18 @@ interface JpaEmailVerificationTokenRepository : JpaRepository<EmailVerificationT
 
 @Repository
 open class EmailVerificationTokenRepositoryImpl(
-    private val jpaRepository: JpaEmailVerificationTokenRepository
+    private val jpaRepository: JpaEmailVerificationTokenRepository,
+    private val entityManager: EntityManager
 ) : EmailVerificationTokenRepository {
     
-    override fun save(token: EmailVerificationToken): EmailVerificationToken = jpaRepository.save(token)
+    override fun save(token: EmailVerificationToken): EmailVerificationToken {
+        return if (jpaRepository.existsById(token.id)) {
+            jpaRepository.save(token)
+        } else {
+            entityManager.persist(token)
+            token
+        }
+    }
     
     override fun findByToken(token: String): EmailVerificationToken? = jpaRepository.findByToken(token)
     

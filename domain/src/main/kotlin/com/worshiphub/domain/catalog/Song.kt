@@ -24,7 +24,7 @@ import java.util.*
 @Entity
 @Table(name = "songs")
 data class Song(
-        @Id @GeneratedValue(strategy = GenerationType.UUID) val id: UUID = UUID.randomUUID(),
+        @Id val id: UUID = UUID.randomUUID(),
         @Column(nullable = false, length = 200) val title: String,
         @Column(nullable = true, length = 100) val artist: String?,
         @Column(name = "song_key", nullable = true, length = 10) val key: String?,

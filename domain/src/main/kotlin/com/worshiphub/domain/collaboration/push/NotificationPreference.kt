@@ -40,7 +40,6 @@ import java.util.*
 @Table(name = "notification_preferences")
 data class NotificationPreference(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
 
     @Column(nullable = false, unique = true)
