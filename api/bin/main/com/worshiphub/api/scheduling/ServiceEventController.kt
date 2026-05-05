@@ -5,8 +5,10 @@ import com.worshiphub.application.scheduling.ScheduleCommand
 import com.worshiphub.application.scheduling.MemberAssignment
 import com.worshiphub.application.scheduling.ResponseCommand
 import com.worshiphub.application.scheduling.CreateSetlistCommand
-import com.worshiphub.application.scheduling.MarkUnavailabilityCommand
+import com.worshiphub.application.scheduling.CreateRecurringServiceCommand
 import com.worshiphub.application.scheduling.GenerateSetlistCommand
+import com.worshiphub.domain.scheduling.RecurrenceFrequency
+import com.worshiphub.domain.scheduling.RecurrenceRule
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -52,6 +54,38 @@ class ServiceEventController(
         @Parameter(description = "Church ID", required = true) @RequestHeader("Church-Id") churchId: UUID
     ): ScheduleServiceResponse {
         
+        // If recurrenceRule is present, delegate to createRecurringService
+        if (request.recurrenceRule != null) {
+            val frequency = try {
+                RecurrenceFrequency.valueOf(request.recurrenceRule.frequency)
+            } catch (e: IllegalArgumentException) {
+                throw BadRequestException("Frecuencia no soportada. Use WEEKLY, MONTHLY o YEARLY")
+            }
+
+            val recurrenceRule = RecurrenceRule(
+                frequency = frequency,
+                recurrenceEndDate = request.recurrenceRule.recurrenceEndDate
+            )
+
+            val command = CreateRecurringServiceCommand(
+                serviceName = request.serviceName,
+                scheduledDate = request.scheduledDate,
+                teamId = request.teamId,
+                churchId = churchId,
+                recurrenceRule = recurrenceRule,
+                memberAssignments = request.memberAssignments.map {
+                    MemberAssignment(it.userId, it.role)
+                }
+            )
+
+            val result = schedulingApplicationService.createRecurringService(command)
+            return if (result.isSuccess) {
+                ScheduleServiceResponse(serviceId = result.getOrThrow())
+            } else {
+                throw BadRequestException(result.exceptionOrNull()?.message ?: "Failed to create recurring service")
+            }
+        }
+
         val command = ScheduleCommand(
             serviceName = request.serviceName,
             scheduledDate = request.scheduledDate,
@@ -137,35 +171,6 @@ class ServiceEventController(
         } else {
             throw BadRequestException(result.exceptionOrNull()?.message ?: "Failed to create setlist")
         }
-    }
-    
-    @Operation(
-        summary = "Mark user unavailability",
-        description = "Allows team members to mark dates when they are unavailable for services",
-        security = [SecurityRequirement(name = "bearerAuth")]
-    )
-    @ApiResponses(value = [
-        ApiResponse(responseCode = "201", description = "Unavailability marked successfully",
-                   content = [Content(schema = Schema(implementation = AvailabilityResponse::class))]),
-        ApiResponse(responseCode = "400", description = "Invalid date or request data"),
-        ApiResponse(responseCode = "404", description = "User not found"),
-        ApiResponse(responseCode = "403", description = "Insufficient permissions")
-    ])
-    @PostMapping("/availability/unavailable")
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('TEAM_MEMBER') or hasRole('WORSHIP_LEADER') or hasRole('CHURCH_ADMIN')")
-    fun markUnavailability(
-        @Valid @RequestBody request: MarkUnavailabilityRequest,
-        @Parameter(description = "User ID", required = true) @RequestHeader("User-Id") userId: UUID
-    ): AvailabilityResponse {
-        val command = MarkUnavailabilityCommand(
-            userId = userId,
-            unavailableDate = request.unavailableDate,
-            reason = request.reason
-        )
-        
-        val availabilityId = schedulingApplicationService.markUnavailability(command)
-        return AvailabilityResponse(availabilityId = availabilityId)
     }
     
     @Operation(
@@ -277,6 +282,70 @@ class ServiceEventController(
                 setlistId = event["setlistId"]?.toString() ?: "",
                 status = event["status"]?.toString() ?: "SCHEDULED"
             )
+        }
+    }
+
+    @Operation(
+        summary = "Update recurrence rule",
+        description = "Modifies the recurrence rule for an existing recurring service. Regenerates future instances without ACCEPTED members.",
+        security = [SecurityRequirement(name = "bearerAuth")]
+    )
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "Recurrence rule updated successfully"),
+        ApiResponse(responseCode = "400", description = "Invalid recurrence rule"),
+        ApiResponse(responseCode = "404", description = "Service not found"),
+        ApiResponse(responseCode = "403", description = "Insufficient permissions")
+    ])
+    @PreAuthorize("hasRole('WORSHIP_LEADER') or hasRole('CHURCH_ADMIN')")
+    @PutMapping("/{serviceId}/recurrence")
+    fun updateRecurrenceRule(
+        @Parameter(description = "Service ID", required = true) @PathVariable serviceId: UUID,
+        @Valid @RequestBody request: RecurrenceRuleRequest
+    ) {
+        val frequency = try {
+            RecurrenceFrequency.valueOf(request.frequency)
+        } catch (e: IllegalArgumentException) {
+            throw BadRequestException("Frecuencia no soportada. Use WEEKLY, MONTHLY o YEARLY")
+        }
+
+        val newRule = RecurrenceRule(
+            frequency = frequency,
+            recurrenceEndDate = request.recurrenceEndDate
+        )
+
+        val result = schedulingApplicationService.updateRecurrenceRule(serviceId, newRule)
+        if (result.isFailure) {
+            val exception = result.exceptionOrNull()
+            if (exception?.message?.contains("not found") == true) {
+                throw NotFoundException(exception.message ?: "Service not found")
+            }
+            throw BadRequestException(exception?.message ?: "Failed to update recurrence rule")
+        }
+    }
+
+    @Operation(
+        summary = "Delete recurring service",
+        description = "Deletes a recurring service and its child instances that are in DRAFT/PUBLISHED status without ACCEPTED members.",
+        security = [SecurityRequirement(name = "bearerAuth")]
+    )
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "204", description = "Recurring service deleted successfully"),
+        ApiResponse(responseCode = "404", description = "Service not found"),
+        ApiResponse(responseCode = "403", description = "Insufficient permissions")
+    ])
+    @PreAuthorize("hasRole('WORSHIP_LEADER') or hasRole('CHURCH_ADMIN')")
+    @DeleteMapping("/{serviceId}/recurring")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteRecurringService(
+        @Parameter(description = "Service ID", required = true) @PathVariable serviceId: UUID
+    ) {
+        val result = schedulingApplicationService.deleteRecurringService(serviceId)
+        if (result.isFailure) {
+            val exception = result.exceptionOrNull()
+            if (exception?.message?.contains("not found") == true) {
+                throw NotFoundException(exception.message ?: "Service not found")
+            }
+            throw BadRequestException(exception?.message ?: "Failed to delete recurring service")
         }
     }
 }

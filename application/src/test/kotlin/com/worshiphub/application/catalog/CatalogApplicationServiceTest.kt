@@ -3,13 +3,18 @@ package com.worshiphub.application.catalog
 import com.worshiphub.domain.catalog.Song
 import com.worshiphub.domain.catalog.repository.AttachmentRepository
 import com.worshiphub.domain.catalog.repository.CategoryRepository
+import com.worshiphub.domain.catalog.repository.GlobalSongRepository
 import com.worshiphub.domain.catalog.repository.SongRepository
 import com.worshiphub.domain.catalog.repository.TagRepository
 import com.worshiphub.domain.collaboration.repository.SongCommentRepository
+import com.worshiphub.domain.organization.repository.UserRepository
+import com.worshiphub.domain.scheduling.repository.ServiceEventRepository
+import com.worshiphub.domain.scheduling.repository.SetlistRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -21,8 +26,15 @@ class CatalogApplicationServiceTest {
     private val tagRepository = mockk<TagRepository>()
     private val attachmentRepository = mockk<AttachmentRepository>()
     private val songCommentRepository = mockk<SongCommentRepository>()
+    private val globalSongRepository = mockk<GlobalSongRepository>()
+    private val eventPublisher = mockk<ApplicationEventPublisher>(relaxed = true)
+    private val userRepository = mockk<UserRepository>()
+    private val serviceEventRepository = mockk<ServiceEventRepository>()
+    private val setlistRepository = mockk<SetlistRepository>()
     private val catalogService = CatalogApplicationService(
-        songRepository, categoryRepository, tagRepository, attachmentRepository, songCommentRepository
+        songRepository, categoryRepository, tagRepository, attachmentRepository,
+        songCommentRepository, globalSongRepository, eventPublisher, userRepository,
+        serviceEventRepository, setlistRepository
     )
 
     @Test
@@ -40,6 +52,8 @@ class CatalogApplicationServiceTest {
 
         every { songRepository.existsByTitleAndArtistAndChurchId(any(), any(), any()) } returns false
         every { songRepository.save(any()) } answers { firstArg() }
+        every { userRepository.findById(any<UUID>()) } returns null
+        every { userRepository.findByChurchIdAndIsActiveTrue(any()) } returns emptyList()
 
         val result = catalogService.createSong(command)
 

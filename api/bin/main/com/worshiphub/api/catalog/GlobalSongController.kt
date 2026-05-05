@@ -1,5 +1,6 @@
 package com.worshiphub.api.catalog
 
+import com.worshiphub.api.common.NotFoundException
 import com.worshiphub.application.catalog.CatalogApplicationService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -56,7 +57,11 @@ class GlobalSongController(
         @Parameter(description = "Global song ID", required = true) @PathVariable globalSongId: UUID,
         @Parameter(description = "Church ID", required = true) @RequestHeader("Church-Id") churchId: UUID
     ): Map<String, UUID> {
-        val songId = catalogApplicationService.importFromGlobal(globalSongId, churchId)
-        return mapOf("songId" to songId)
+        try {
+            val songId = catalogApplicationService.importFromGlobal(globalSongId, churchId)
+            return mapOf("songId" to songId)
+        } catch (e: IllegalArgumentException) {
+            throw NotFoundException(e.message ?: "Global song not found")
+        }
     }
 }

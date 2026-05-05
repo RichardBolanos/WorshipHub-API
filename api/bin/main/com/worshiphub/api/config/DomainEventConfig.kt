@@ -27,6 +27,7 @@ class DomainEventHandler(
     
     @EventListener
     fun handleSongCreated(event: com.worshiphub.domain.common.SongEvent.SongCreated) {
+        // Notify the user who created the song that it was successfully added
         notificationApplicationService.sendNotification(
             userId = event.createdBy,
             title = "Nueva canción agregada",
@@ -37,6 +38,7 @@ class DomainEventHandler(
     
     @EventListener
     fun handleServiceScheduled(event: com.worshiphub.domain.common.ServiceEvent.ServiceScheduled) {
+        // Notify all team members assigned to the service
         event.teamMembers.forEach { memberId ->
             notificationApplicationService.sendNotification(
                 userId = memberId,

@@ -10,5 +10,6 @@ data class UpdateSongCommand(
         val lyrics: String? = null,
         val chords: String? = null,
         val tagIds: List<UUID>? = null,
-        val categoryIds: List<UUID>? = null
+        val categoryIds: List<UUID>? = null,
+        val updatedBy: UUID? = null  // User who is updating the song (for push notifications)
 )

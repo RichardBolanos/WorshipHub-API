@@ -17,6 +17,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - worshiphub-net
 
   mailpit:
     image: axllent/mailpit
@@ -25,3 +27,44 @@ services:
     ports:
       - "8025:8025" # Web UI
       - "1025:1025" # SMTP
+    networks:
+      - worshiphub-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.native
+    container_name: WorshipHubBackend
+    ports:
+      - "9090:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+      - DATABASE_URL=jdbc:postgresql://db:5432/worshiphub
+      - DATABASE_USERNAME=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATABASE_DRIVER=org.postgresql.Driver
+      - JWT_SECRET=local-dev-secret-key-for-development-only-not-for-production-use-32chars-minimum
+      - FLYWAY_ENABLED=true
+      - FLYWAY_BASELINE_ON_MIGRATE=true
+      - SERVER_PORT=8080
+      - SPRING_MAIL_HOST=mailpit
+      - SPRING_MAIL_PORT=1025
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=false
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=false
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8080/api/v1/health || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - worshiphub-net
+
+networks:
+  worshiphub-net:
+    driver: bridge

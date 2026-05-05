@@ -38,14 +38,14 @@ data class Song(
             joinColumns = [JoinColumn(name = "song_id")],
             inverseJoinColumns = [JoinColumn(name = "category_id")]
         )
-        val categories: List<Category> = emptyList(),
+        val categories: Set<Category> = emptySet(),
         @ManyToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE], fetch = FetchType.LAZY)
         @JoinTable(
             name = "song_tags",
             joinColumns = [JoinColumn(name = "song_id")],
             inverseJoinColumns = [JoinColumn(name = "tag_id")]
         )
-        val tags: List<Tag> = emptyList(),
+        val tags: Set<Tag> = emptySet(),
         @OneToMany(mappedBy = "songId", cascade = [CascadeType.ALL], fetch = FetchType.LAZY)
         val attachments: List<Attachment> = emptyList(),
         @Column(nullable = false) val churchId: UUID,
@@ -91,5 +91,16 @@ data class Song(
     /** Checks if song has a specific tag. */
     fun hasTag(tagName: String): Boolean {
         return tags.any { it.name.equals(tagName, ignoreCase = true) }
+    }
+    
+    // Override equals and hashCode to use only ID for entity identity
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Song) return false
+        return id == other.id
+    }
+    
+    override fun hashCode(): Int {
+        return id.hashCode()
     }
 }

@@ -11,9 +11,15 @@ import com.worshiphub.domain.catalog.repository.GlobalSongRepository
 import com.worshiphub.domain.catalog.repository.SongRepository
 import com.worshiphub.domain.catalog.repository.TagRepository
 import com.worshiphub.domain.collaboration.SongComment
+import com.worshiphub.domain.collaboration.push.PushEvent
 import com.worshiphub.domain.collaboration.repository.SongCommentRepository
+import com.worshiphub.domain.organization.repository.UserRepository
+import com.worshiphub.domain.scheduling.repository.ServiceEventRepository
+import com.worshiphub.domain.scheduling.repository.SetlistRepository
+import java.time.LocalDateTime
 import java.util.*
 import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -25,7 +31,11 @@ open class CatalogApplicationService(
         private val tagRepository: TagRepository,
         private val attachmentRepository: AttachmentRepository,
         private val songCommentRepository: SongCommentRepository,
-        private val globalSongRepository: GlobalSongRepository
+        private val globalSongRepository: GlobalSongRepository,
+        private val eventPublisher: ApplicationEventPublisher,
+        private val userRepository: UserRepository,
+        private val serviceEventRepository: ServiceEventRepository,
+        private val setlistRepository: SetlistRepository
 ) {
     private val log = LoggerFactory.getLogger(CatalogApplicationService::class.java)
 
@@ -80,6 +90,29 @@ open class CatalogApplicationService(
 
             val songWithAssociations = song.copy(tags = tags, categories = categories)
             val savedSong = songRepository.save(songWithAssociations)
+            
+            // Publish push event for new song (Req 7.1)
+            try {
+                val creatorUser = userRepository.findById(command.createdBy)
+                val addedByName = creatorUser?.let { "${it.firstName} ${it.lastName}" } ?: "Unknown"
+                val activeMembers = userRepository.findByChurchIdAndIsActiveTrue(command.churchId)
+                val recipientIds = activeMembers
+                    .map { it.id }
+                    .filter { it != command.createdBy }
+                if (recipientIds.isNotEmpty()) {
+                    eventPublisher.publishEvent(
+                        PushEvent.NewSong(
+                            recipientUserIds = recipientIds,
+                            songTitle = savedSong.title,
+                            artist = savedSong.artist,
+                            addedByName = addedByName,
+                            songId = savedSong.id
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                log.warn("Failed to publish NewSong push event for song {}: {}", savedSong.id, e.message)
+            }
             
             Result.success(savedSong)
         } catch (e: Exception) {
@@ -179,6 +212,39 @@ open class CatalogApplicationService(
                     )
 
             songRepository.save(updatedSong)
+            
+            // Publish push event for song update (Req 20.1, 20.3)
+            try {
+                if (command.updatedBy != null) {
+                    val changedFields = mutableListOf<String>()
+                    if (command.key != null && command.key != existingSong.key) changedFields.add("key")
+                    if (command.bpm != null && command.bpm != existingSong.bpm) changedFields.add("bpm")
+                    if (command.lyrics != null && command.lyrics != existingSong.lyrics) changedFields.add("lyrics")
+                    if (command.chords != null && command.chords != existingSong.chords) changedFields.add("chords")
+                    if (command.title != existingSong.title) changedFields.add("title")
+                    if (command.artist != null && command.artist != existingSong.artist) changedFields.add("artist")
+                    
+                    if (changedFields.isNotEmpty()) {
+                        val recipientIds = findUsersWithSongInFutureSetlists(songId, existingSong.churchId, command.updatedBy)
+                        if (recipientIds.isNotEmpty()) {
+                            val updaterUser = userRepository.findById(command.updatedBy)
+                            val updatedByName = updaterUser?.let { "${it.firstName} ${it.lastName}" } ?: "Unknown"
+                            eventPublisher.publishEvent(
+                                PushEvent.SongUpdated(
+                                    recipientUserIds = recipientIds,
+                                    songTitle = updatedSong.title,
+                                    changedFields = changedFields,
+                                    updatedByName = updatedByName,
+                                    songId = songId
+                                )
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                log.warn("Failed to publish SongUpdated push event for song {}: {}", songId, e.message)
+            }
+            
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(RuntimeException("Failed to update song", e))
@@ -187,7 +253,7 @@ open class CatalogApplicationService(
 
     /** Deletes a song. */
     @Transactional
-    fun deleteSong(songId: UUID): Result<Unit> {
+    fun deleteSong(songId: UUID, deletedBy: UUID? = null): Result<Unit> {
         return try {
             val song =
                     songRepository.findById(songId)
@@ -195,7 +261,39 @@ open class CatalogApplicationService(
                                     IllegalArgumentException("Song not found: $songId")
                             )
 
+            // Collect recipients before deletion (Req 21.1)
+            var recipientIds: List<UUID> = emptyList()
+            var affectedSetlistNames: List<String> = emptyList()
+            var deletedByName = "Unknown"
+            if (deletedBy != null) {
+                try {
+                    recipientIds = findUsersWithSongInAnySetlist(songId, song.churchId, deletedBy)
+                    affectedSetlistNames = findSetlistNamesContainingSong(songId, song.churchId)
+                    val deleterUser = userRepository.findById(deletedBy)
+                    deletedByName = deleterUser?.let { "${it.firstName} ${it.lastName}" } ?: "Unknown"
+                } catch (e: Exception) {
+                    log.warn("Failed to collect SongDeleted push event data for song {}: {}", songId, e.message)
+                }
+            }
+
             songRepository.delete(song)
+            
+            // Publish push event for song deletion (Req 21.1)
+            if (deletedBy != null && recipientIds.isNotEmpty()) {
+                try {
+                    eventPublisher.publishEvent(
+                        PushEvent.SongDeleted(
+                            recipientUserIds = recipientIds,
+                            songTitle = song.title,
+                            deletedByName = deletedByName,
+                            affectedSetlists = affectedSetlistNames
+                        )
+                    )
+                } catch (e: Exception) {
+                    log.warn("Failed to publish SongDeleted push event for song {}: {}", songId, e.message)
+                }
+            }
+            
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(RuntimeException("Failed to delete song", e))
@@ -285,6 +383,32 @@ open class CatalogApplicationService(
                 )
 
         val savedAttachment = attachmentRepository.save(attachment)
+        
+        // Publish push event for attachment added (Req 22.1)
+        if (command.addedBy != null) {
+            try {
+                val song = songRepository.findById(command.songId)
+                if (song != null) {
+                    val recipientIds = getSongCreatorAndCommenters(command.songId, command.addedBy)
+                    if (recipientIds.isNotEmpty()) {
+                        val adderUser = userRepository.findById(command.addedBy)
+                        val addedByName = adderUser?.let { "${it.firstName} ${it.lastName}" } ?: "Unknown"
+                        eventPublisher.publishEvent(
+                            PushEvent.AttachmentAdded(
+                                recipientUserIds = recipientIds,
+                                songTitle = song.title,
+                                attachmentType = command.type.name,
+                                addedByName = addedByName,
+                                songId = command.songId
+                            )
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                log.warn("Failed to publish AttachmentAdded push event for song {}: {}", command.songId, e.message)
+            }
+        }
+        
         return savedAttachment.id
     }
 
@@ -299,6 +423,35 @@ open class CatalogApplicationService(
                 )
 
         val savedComment = songCommentRepository.save(comment)
+        
+        // Publish push event for song comment (Req 4.1, 4.2)
+        try {
+            val song = songRepository.findById(command.songId)
+            if (song != null) {
+                val recipientIds = getSongCreatorAndCommenters(command.songId, command.userId)
+                if (recipientIds.isNotEmpty()) {
+                    val commenterUser = userRepository.findById(command.userId)
+                    val commenterName = commenterUser?.let { "${it.firstName} ${it.lastName}" } ?: "Unknown"
+                    val commentExcerpt = if (command.content.length > 100) {
+                        command.content.take(100) + "..."
+                    } else {
+                        command.content
+                    }
+                    eventPublisher.publishEvent(
+                        PushEvent.SongComment(
+                            recipientUserIds = recipientIds,
+                            commenterName = commenterName,
+                            songTitle = song.title,
+                            commentExcerpt = commentExcerpt,
+                            songId = command.songId
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            log.warn("Failed to publish SongComment push event for song {}: {}", command.songId, e.message)
+        }
+        
         return savedComment.id
     }
 
@@ -336,5 +489,73 @@ open class CatalogApplicationService(
 
         val savedSong = songRepository.save(song)
         return savedSong.id
+    }
+
+    // --- Push notification helper methods ---
+
+    /**
+     * Finds users who have the given song in setlists associated with future services,
+     * excluding the specified actor. Returns deduplicated user IDs.
+     * Used for SongUpdated notifications (Req 20.1, 20.3).
+     */
+    private fun findUsersWithSongInFutureSetlists(songId: UUID, churchId: UUID, excludeUserId: UUID): List<UUID> {
+        val allSetlists = setlistRepository.findByChurchId(churchId)
+        val setlistsWithSong = allSetlists.filter { songId in it.songIds }
+        if (setlistsWithSong.isEmpty()) return emptyList()
+
+        val now = LocalDateTime.now()
+        val recipientIds = mutableSetOf<UUID>()
+        for (setlist in setlistsWithSong) {
+            val futureServices = serviceEventRepository.findBySetlistIdAndScheduledDateAfter(setlist.id, now)
+            for (service in futureServices) {
+                service.assignedMembers.forEach { member ->
+                    recipientIds.add(member.userId)
+                }
+            }
+        }
+        recipientIds.remove(excludeUserId)
+        return recipientIds.toList()
+    }
+
+    /**
+     * Finds users who have the given song in any setlist,
+     * excluding the specified actor. Used for SongDeleted notifications (Req 21.1).
+     */
+    private fun findUsersWithSongInAnySetlist(songId: UUID, churchId: UUID, excludeUserId: UUID): List<UUID> {
+        val allSetlists = setlistRepository.findByChurchId(churchId)
+        val setlistsWithSong = allSetlists.filter { songId in it.songIds }
+        if (setlistsWithSong.isEmpty()) return emptyList()
+
+        val now = LocalDateTime.now()
+        val recipientIds = mutableSetOf<UUID>()
+        for (setlist in setlistsWithSong) {
+            val services = serviceEventRepository.findBySetlistIdAndScheduledDateAfter(setlist.id, now)
+            for (service in services) {
+                service.assignedMembers.forEach { member ->
+                    recipientIds.add(member.userId)
+                }
+            }
+        }
+        recipientIds.remove(excludeUserId)
+        return recipientIds.toList()
+    }
+
+    /**
+     * Finds the names of setlists that contain the given song.
+     * Used for SongDeleted notifications (Req 21.1).
+     */
+    private fun findSetlistNamesContainingSong(songId: UUID, churchId: UUID): List<String> {
+        val allSetlists = setlistRepository.findByChurchId(churchId)
+        return allSetlists.filter { songId in it.songIds }.map { it.name }
+    }
+
+    /**
+     * Gets all previous commenters for a song, excluding the actor.
+     * Used for SongComment (Req 4.1, 4.2) and AttachmentAdded (Req 22.1) notifications.
+     */
+    private fun getSongCreatorAndCommenters(songId: UUID, excludeUserId: UUID): List<UUID> {
+        val comments = songCommentRepository.findBySongId(songId)
+        val commenterIds = comments.map { it.userId }.distinct()
+        return commenterIds.filter { it != excludeUserId }
     }
 }

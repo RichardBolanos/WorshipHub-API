@@ -25,12 +25,7 @@ class CorsConfig {
             "Content-Type",
             "X-Requested-With",
             "Accept",
-            "Church-Id",          // Required by all API calls in WorshipHub
-            "Upgrade",            // Required for WebSocket handshake
-            "Connection",         // Required for WebSocket handshake
-            "Sec-WebSocket-Key",
-            "Sec-WebSocket-Version",
-            "Sec-WebSocket-Extensions"
+            "Church-Id"           // Required by all API calls in WorshipHub
         )
         configuration.allowCredentials = true
         configuration.maxAge = 3600L // Cache preflight for 1 hour

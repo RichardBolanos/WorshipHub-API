@@ -1,11 +1,12 @@
 package com.worshiphub.domain.catalog
 
+import jakarta.persistence.*
 import java.time.LocalDateTime
 import java.util.*
 
 /**
  * GlobalSong domain entity for the global song catalog.
- * Pure domain model without persistence annotations.
+ * Represents verified songs available for import into church catalogs.
  * 
  * @property id Unique identifier for the global song
  * @property title Song title
@@ -16,13 +17,39 @@ import java.util.*
  * @property isVerified Whether the song is officially verified
  * @property createdAt Timestamp when added to global catalog
  */
+@Entity
+@Table(name = "global_songs")
 data class GlobalSong(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
+
+    @Column(nullable = false, length = 200)
     val title: String,
+
+    @Column(nullable = false, length = 100)
     val artist: String,
+
+    @Column(name = "song_key", nullable = false, length = 10)
     val key: String,
+
+    @Column
     val bpm: Int? = null,
+
+    @Column(columnDefinition = "TEXT")
     val chords: String? = null,
+
+    @Column(nullable = false)
     val isVerified: Boolean = false,
+
+    @Column(nullable = false)
     val createdAt: LocalDateTime = LocalDateTime.now()
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is GlobalSong) return false
+        return id == other.id
+    }
+
+    override fun hashCode(): Int = id.hashCode()
+}

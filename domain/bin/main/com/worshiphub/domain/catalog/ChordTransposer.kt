@@ -6,6 +6,11 @@ package com.worshiphub.domain.catalog
 object ChordTransposer {
     
     private val chromaticScale = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+    private val chromaticScaleFlats = listOf("C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B")
+    
+    // Keys that typically use flats
+    private val flatKeys = setOf("F", "Bb", "Eb", "Ab", "Db", "Gb", "Cb", "Dm", "Gm", "Cm", "Fm", "Bbm", "Ebm")
+    
     private val chordPattern = Regex("""([A-G][#b]?)([^A-G\s]*)""")
     
     /**
@@ -20,29 +25,41 @@ object ChordTransposer {
         val semitones = calculateSemitones(fromKey, toKey)
         if (semitones == 0) return chords
         
+        val useFlats = flatKeys.contains(toKey)
+        
         // Handle ChordPro format [chord]text
         return Regex("\\[([A-G][#b]?)([^\\]]*)\\]").replace(chords) { matchResult ->
             val root = matchResult.groupValues[1]
             val suffix = matchResult.groupValues[2]
-            val transposedRoot = transposeNote(root, semitones)
+            val transposedRoot = transposeNote(root, semitones, useFlats)
             "[$transposedRoot$suffix]"
         }
     }
     
     private fun calculateSemitones(fromKey: String, toKey: String): Int {
-        val fromIndex = chromaticScale.indexOf(normalizeKey(fromKey))
-        val toIndex = chromaticScale.indexOf(normalizeKey(toKey))
+        // Extract root note from key (remove minor/major suffix)
+        val fromRoot = extractRootNote(fromKey)
+        val toRoot = extractRootNote(toKey)
+        
+        val fromIndex = chromaticScale.indexOf(normalizeKey(fromRoot))
+        val toIndex = chromaticScale.indexOf(normalizeKey(toRoot))
         if (fromIndex == -1 || toIndex == -1) {
             throw IllegalArgumentException("Invalid key: $fromKey or $toKey")
         }
         return (toIndex - fromIndex + 12) % 12
     }
     
-    private fun transposeNote(note: String, semitones: Int): String {
+    private fun extractRootNote(key: String): String {
+        // Remove 'm', 'min', 'maj', 'major', 'minor' suffixes
+        return key.replace(Regex("(m|min|maj|major|minor)$", RegexOption.IGNORE_CASE), "")
+    }
+    
+    private fun transposeNote(note: String, semitones: Int, useFlats: Boolean): String {
         val normalizedNote = normalizeKey(note)
         val currentIndex = chromaticScale.indexOf(normalizedNote)
         return if (currentIndex != -1) {
-            chromaticScale[(currentIndex + semitones) % 12]
+            val newIndex = (currentIndex + semitones) % 12
+            if (useFlats) chromaticScaleFlats[newIndex] else chromaticScale[newIndex]
         } else note
     }
     

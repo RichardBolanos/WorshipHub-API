@@ -12,6 +12,7 @@ import org.springframework.web.context.request.WebRequest
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import com.worshiphub.api.common.BusinessException
 import jakarta.validation.ConstraintViolationException
+import org.springframework.web.server.ResponseStatusException
 import java.time.LocalDateTime
 import org.slf4j.LoggerFactory
 import org.hibernate.StaleObjectStateException
@@ -126,6 +127,24 @@ class GlobalExceptionHandler {
         )
         
         return ResponseEntity.badRequest().body(errorResponse)
+    }
+
+    @ExceptionHandler(ResponseStatusException::class)
+    fun handleResponseStatusException(
+        ex: ResponseStatusException,
+        request: WebRequest
+    ): ResponseEntity<ErrorResponse> {
+        logger.warn("Response status exception on {}: {}", request.getDescription(false), ex.reason, ex)
+
+        val errorResponse = ErrorResponse(
+            timestamp = LocalDateTime.now(),
+            status = ex.statusCode.value(),
+            error = ex.statusCode.toString(),
+            message = ex.reason ?: "Request error",
+            path = request.getDescription(false).removePrefix("uri=")
+        )
+
+        return ResponseEntity.status(ex.statusCode).body(errorResponse)
     }
 
     @ExceptionHandler(RuntimeException::class)

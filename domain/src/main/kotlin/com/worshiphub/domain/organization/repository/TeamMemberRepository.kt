@@ -8,6 +8,7 @@ interface TeamMemberRepository {
     fun findById(id: UUID): TeamMember?
     fun findByTeamId(teamId: UUID): List<TeamMember>
     fun findByTeamIdAndUserId(teamId: UUID, userId: UUID): TeamMember?
+    fun findByUserId(userId: UUID): List<TeamMember>
     fun deleteByTeamIdAndUserId(teamId: UUID, userId: UUID)
     fun deleteByTeamId(teamId: UUID)
     fun countByTeamId(teamId: UUID): Int

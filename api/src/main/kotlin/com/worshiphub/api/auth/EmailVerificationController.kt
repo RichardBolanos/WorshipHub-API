@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.security.SecurityRequirements
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -52,6 +53,7 @@ class EmailVerificationController(
         summary = "Verify email address",
         description = "Verifies user email using the token sent via email. Returns an HTML page."
     )
+    @SecurityRequirements // No security required — public endpoint
     @GetMapping("/verify/{token}", produces = ["text/html"])
     fun verifyEmail(
         @Parameter(description = "Email verification token", required = true)
@@ -227,6 +229,7 @@ class EmailVerificationController(
         ApiResponse(responseCode = "400", description = "Email already verified or failed to send"),
         ApiResponse(responseCode = "404", description = "User not found")
     ])
+    @SecurityRequirements // No security required — public endpoint
     @PostMapping("/resend")
     fun resendEmailVerification(@RequestBody request: ResendEmailVerificationRequest): ResponseEntity<MessageResponse> {
         return when (emailVerificationService.resendEmailVerificationByEmail(request.email)) {

@@ -31,12 +31,6 @@ data class CreateSongResponse(
         val message: String = "Song created successfully"
 )
 
-@Schema(description = "Chord transposition response")
-data class TransposeChordsResponse(
-        @Schema(description = "Transposed chords in ChordPro format") val chords: String,
-        @Schema(description = "Target key", example = "D") val targetKey: String
-)
-
 @Schema(description = "Song attachment response")
 data class AttachmentResponse(
         @Schema(description = "Attachment ID", example = "123e4567-e89b-12d3-a456-426614174000")

@@ -10,5 +10,6 @@ data class AddAttachmentCommand(
     val songId: UUID,
     val name: String,
     val url: String,
-    val type: AttachmentType
+    val type: AttachmentType,
+    val addedBy: UUID? = null  // User who is adding the attachment (for push notifications)
 )

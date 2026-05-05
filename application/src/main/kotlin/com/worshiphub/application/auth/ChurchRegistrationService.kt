@@ -5,6 +5,7 @@ import com.worshiphub.domain.organization.User
 import com.worshiphub.domain.organization.UserRole
 import com.worshiphub.domain.organization.repository.ChurchRepository
 import com.worshiphub.domain.organization.repository.UserRepository
+import org.springframework.core.env.Environment
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -21,10 +22,19 @@ class ChurchRegistrationService(
     private val passwordEncoder: PasswordEncoder,
     private val passwordValidator: PasswordValidator,
     private val emailVerificationService: EmailVerificationService,
-    private val emailService: EmailService
+    private val emailService: EmailService,
+    private val environment: Environment
 ) {
     
     private val logger = LoggerFactory.getLogger(ChurchRegistrationService::class.java)
+
+    /**
+     * Whether the H2 (development/testing) profile is active.
+     * When true, newly registered users are auto-verified and activated
+     * so that E2E tests can login immediately without email verification.
+     */
+    private val isH2Profile: Boolean
+        get() = environment.activeProfiles.contains("h2")
     
     /**
      * Registers a new church with its first admin user.
@@ -56,6 +66,13 @@ class ChurchRegistrationService(
         
         val savedChurch = churchRepository.save(church)
         logger.info("Church saved successfully: id=${savedChurch.id}")
+
+        // In H2 profile (dev/testing), auto-verify and activate the user
+        // so that E2E tests can login immediately without email verification.
+        val autoVerify = isH2Profile
+        if (autoVerify) {
+            logger.info("H2 profile active — auto-verifying and activating admin user")
+        }
         
         // Create admin user
         val hashedPassword = passwordEncoder.encode(command.adminPassword)
@@ -66,15 +83,17 @@ class ChurchRegistrationService(
             passwordHash = hashedPassword,
             churchId = savedChurch.id,
             role = UserRole.CHURCH_ADMIN,
-            isActive = false, // Will be activated after email verification
-            isEmailVerified = false
+            isActive = autoVerify,
+            isEmailVerified = autoVerify
         )
         val savedUser = userRepository.save(adminUser)
+
+        if (!autoVerify) {
+            // Send email verification (production flow)
+            emailVerificationService.sendEmailVerification(savedUser.id)
+        }
         
-        // Send email verification
-        emailVerificationService.sendEmailVerification(savedUser.id)
-        
-        // Send welcome email
+        // Send welcome email (no-op in H2 profile thanks to NoOpEmailService)
         emailService.sendWelcomeEmail(savedUser.email, savedUser.firstName, savedChurch.name)
         
         return ChurchRegistrationResult.Success(savedChurch.id, savedUser.id)

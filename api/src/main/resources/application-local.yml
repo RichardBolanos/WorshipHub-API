@@ -9,9 +9,9 @@ spring:
       port: 35729
       
   datasource:
-    url: jdbc:postgresql://localhost:5442/worshiphub?sslmode=disable
-    username: postgres
-    password: postgres
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5442/worshiphub?sslmode=disable}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
     hikari:
       auto-commit: false
@@ -44,8 +44,8 @@ spring:
     require-ssl: false
 
   mail:
-    host: localhost
-    port: 1025
+    host: ${SPRING_MAIL_HOST:localhost}
+    port: ${SPRING_MAIL_PORT:1025}
     properties:
       mail:
         smtp:
@@ -54,7 +54,7 @@ spring:
             enable: false
 
 server:
-  port: 9090
+  port: ${SERVER_PORT:9090}
 
 jwt:
   secret: ${JWT_SECRET:local-dev-secret-key-for-development-only-not-for-production-use-32chars}

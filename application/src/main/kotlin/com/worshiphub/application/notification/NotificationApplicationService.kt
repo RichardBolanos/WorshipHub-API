@@ -20,12 +20,36 @@ open class NotificationApplicationService(
      */
     @Transactional
     fun sendNotification(userId: UUID, title: String, message: String, type: NotificationType): Result<UUID> {
+        return sendNotification(userId, title, message, type, null, null)
+    }
+
+    /**
+     * Sends a notification to a user with optional deep linking information.
+     *
+     * @param userId The user to notify
+     * @param title Notification title
+     * @param message Notification body
+     * @param type The notification type
+     * @param relatedEntityId Optional entity ID for deep linking (e.g., service ID, song ID)
+     * @param relatedEntityType Optional entity type for deep linking (e.g., "SERVICE", "SONG", "TEAM")
+     */
+    @Transactional
+    fun sendNotification(
+        userId: UUID,
+        title: String,
+        message: String,
+        type: NotificationType,
+        relatedEntityId: UUID?,
+        relatedEntityType: String?
+    ): Result<UUID> {
         return try {
             val notification = Notification(
                 userId = userId,
                 title = title,
                 message = message,
-                type = type
+                type = type,
+                relatedEntityId = relatedEntityId,
+                relatedEntityType = relatedEntityType
             )
             
             val savedNotification = notificationRepository.save(notification)

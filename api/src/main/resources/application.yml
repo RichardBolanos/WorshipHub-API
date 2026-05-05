@@ -32,6 +32,8 @@ spring:
     properties:
       hibernate:
         format_sql: ${JPA_FORMAT_SQL:false}
+        bytecode:
+          provider: none
         jdbc:
           batch_size: 10
         order_inserts: true
@@ -57,6 +59,9 @@ spring:
       path: /h2-console
       settings:
         web-allow-others: false
+  mail:
+    host: ${SPRING_MAIL_HOST:localhost}
+    port: ${SPRING_MAIL_PORT:1025}
   security:
     require-ssl: false # Set to true in production
     oauth2:
@@ -79,7 +84,17 @@ jwt:
   expiration: ${JWT_EXPIRATION:3600000} # 1 hour
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:86400000} # 24 hours
 
-# springdoc configuration is handled by default
+# springdoc configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
+    display-request-duration: true
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
 
 management:
   endpoints:

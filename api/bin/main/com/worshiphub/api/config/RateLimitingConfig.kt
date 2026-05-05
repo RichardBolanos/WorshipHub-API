@@ -11,8 +11,10 @@ import java.time.temporal.ChronoUnit
 
 /**
  * Simple rate limiting implementation.
+ * Disabled in the h2 test profile to prevent rate limit errors during E2E tests.
  */
 @Component
+@org.springframework.context.annotation.Profile("!h2")
 class RateLimitingFilter : Filter {
     
     private val requestCounts = ConcurrentHashMap<String, RequestCounter>()

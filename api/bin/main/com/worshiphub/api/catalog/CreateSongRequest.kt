@@ -2,6 +2,7 @@ package com.worshiphub.api.catalog
 
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.*
+import java.util.*
 
 @Schema(description = "Request data for creating a new song in the church catalog")
 data class CreateSongRequest(
@@ -22,7 +23,7 @@ data class CreateSongRequest(
         )
         @Schema(description = "Musical key of the song", example = "G")
         val key: String? = null,
-        @field:Min(value = 60, message = "BPM must be at least 60")
+        @field:Min(value = 0, message = "BPM must be at least 0")
         @field:Max(value = 200, message = "BPM must not exceed 200")
         @Schema(description = "Beats per minute (tempo) of the song", example = "120")
         val bpm: Int? = null,
@@ -31,5 +32,9 @@ data class CreateSongRequest(
         val lyrics: String? = null,
         @field:Size(max = 10000, message = "Chords content too long (max 10000 characters)")
         @Schema(description = "Song chords in ChordPro format")
-        val chords: String? = null
+        val chords: String? = null,
+        @Schema(description = "List of tag IDs to associate with the song")
+        val tagIds: List<UUID>? = null,
+        @Schema(description = "List of category IDs to associate with the song")
+        val categoryIds: List<UUID>? = null
 )

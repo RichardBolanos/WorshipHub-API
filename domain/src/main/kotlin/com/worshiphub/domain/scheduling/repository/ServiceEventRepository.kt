@@ -1,6 +1,7 @@
 package com.worshiphub.domain.scheduling.repository
 
 import com.worshiphub.domain.scheduling.ServiceEvent
+import com.worshiphub.domain.scheduling.ServiceEventStatus
 import java.time.LocalDateTime
 import java.util.*
 
@@ -15,6 +16,8 @@ interface ServiceEventRepository {
     fun findByChurchId(churchId: UUID): List<ServiceEvent>
     fun findUpcomingByTeamId(teamId: UUID): List<ServiceEvent>
     fun findByParentServiceId(parentServiceId: UUID): List<ServiceEvent>
+    fun findByStatusesAndDateRange(statuses: List<ServiceEventStatus>, startDate: LocalDateTime, endDate: LocalDateTime): List<ServiceEvent>
+    fun findBySetlistIdAndScheduledDateAfter(setlistId: UUID, after: LocalDateTime): List<ServiceEvent>
     fun delete(serviceEvent: ServiceEvent)
     fun deleteAll(serviceEvents: List<ServiceEvent>)
 }

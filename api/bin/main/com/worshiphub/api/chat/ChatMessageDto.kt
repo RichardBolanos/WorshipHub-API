@@ -7,7 +7,8 @@ import jakarta.validation.constraints.Size
 import java.time.LocalDateTime
 import java.util.*
 
-@Schema(description = "WebSocket message data for sending team chat messages")
+@Schema(description = "Legacy message data for sending team chat messages (use SendChatMessageRestDto instead)")
+@Deprecated("Use SendChatMessageRestDto with the REST endpoint POST /api/v1/teams/{teamId}/messages")
 data class SendChatMessageDto(
     @field:NotNull
     @Schema(
@@ -22,6 +23,20 @@ data class SendChatMessageDto(
     @Schema(
         description = "Chat message content", 
         example = "Great practice today! See you all Sunday.", 
+        required = true,
+        minLength = 1,
+        maxLength = 1000
+    )
+    val content: String
+)
+
+@Schema(description = "REST request body for sending a chat message")
+data class SendChatMessageRestDto(
+    @field:NotBlank
+    @field:Size(min = 1, max = 1000, message = "Message must be between 1 and 1000 characters")
+    @Schema(
+        description = "Chat message content",
+        example = "Great practice today! See you all Sunday.",
         required = true,
         minLength = 1,
         maxLength = 1000

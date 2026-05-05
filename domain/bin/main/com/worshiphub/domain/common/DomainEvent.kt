@@ -16,7 +16,8 @@ sealed class SongEvent : DomainEvent {
         override val aggregateId: UUID,
         val title: String,
         val artist: String,
-        val churchId: UUID
+        val churchId: UUID,
+        val createdBy: UUID  // User who created the song
     ) : SongEvent()
 }
 

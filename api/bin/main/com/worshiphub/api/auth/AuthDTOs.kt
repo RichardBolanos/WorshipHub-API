@@ -87,3 +87,15 @@ data class RegisterResponse(
     @Schema(description = "Registration confirmation message", example = "User registered successfully")
     val message: String
 )
+
+@Schema(description = "Error response for failed operations")
+data class ErrorResponse(
+    @Schema(description = "Error code identifier", example = "INVALID_CREDENTIALS")
+    val error: String,
+    
+    @Schema(description = "Human-readable error message", example = "Invalid email or password")
+    val message: String,
+    
+    @Schema(description = "HTTP status code", example = "401")
+    val statusCode: Int? = null
+)
