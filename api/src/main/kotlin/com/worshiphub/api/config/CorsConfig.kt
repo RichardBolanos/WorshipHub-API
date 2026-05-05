@@ -25,7 +25,8 @@ class CorsConfig {
             "Content-Type",
             "X-Requested-With",
             "Accept",
-            "Church-Id"           // Required by all API calls in WorshipHub
+            "Church-Id",          // Church context (required by team/song/etc. endpoints)
+            "User-Id"             // User context (required by notifications endpoint)
         )
         configuration.allowCredentials = true
         configuration.maxAge = 3600L // Cache preflight for 1 hour
