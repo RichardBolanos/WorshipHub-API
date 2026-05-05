@@ -6,6 +6,7 @@ import com.worshiphub.application.auth.ChurchRegistrationResult
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.security.SecurityRequirements
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
@@ -32,6 +33,7 @@ class ChurchRegistrationController(
         ApiResponse(responseCode = "400", description = "Invalid registration data"),
         ApiResponse(responseCode = "409", description = "Email already exists")
     ])
+    @SecurityRequirements // No security required — public endpoint
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     fun registerChurchWithAdmin(@Valid @RequestBody request: RegisterChurchWithAdminRequest): ResponseEntity<ChurchRegistrationResponse> {

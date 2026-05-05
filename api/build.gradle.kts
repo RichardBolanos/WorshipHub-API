@@ -40,8 +40,13 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-    implementation("org.springframework.boot:spring-boot-starter-websocket")
     
+    // Spring Retry + AOP for push notification retry with exponential backoff
+    implementation("org.springframework.retry:spring-retry")
+    implementation("org.springframework.boot:spring-boot-starter-aop")
+    
+    // Firebase Admin SDK for push notification configuration
+    implementation("com.google.firebase:firebase-admin:9.3.0")
 
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")
@@ -92,6 +97,7 @@ sourceSets {
                 "com/worshiphub/api/organization/UserControllerTest.kt",
                 "com/worshiphub/api/scheduling/ServiceEventControllerIntegrationTest.kt",
                 "com/worshiphub/api/scheduling/SetlistManagementControllerTest.kt",
+                "com/worshiphub/api/scheduling/AvailabilityControllerTest.kt",
             )
         }
     }

@@ -6,8 +6,11 @@ import com.worshiphub.application.auth.RegisterUserCommand
 import com.worshiphub.application.auth.RegisterResult
 import com.worshiphub.security.JwtTokenProvider
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.security.SecurityRequirements
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -25,14 +28,31 @@ class AuthController(
 
     @Operation(
         summary = "User login",
-        description = "Authenticates user and returns JWT token for API access"
+        description = "Authenticates user with email and password, returns JWT token for API access"
     )
     @ApiResponses(value = [
-        ApiResponse(responseCode = "200", description = "Login successful"),
-        ApiResponse(responseCode = "401", description = "Invalid credentials"),
-        ApiResponse(responseCode = "403", description = "Email verification required or account inactive"),
-        ApiResponse(responseCode = "400", description = "Invalid request data")
+        ApiResponse(
+            responseCode = "200",
+            description = "Login successful",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = LoginResponse::class))]
+        ),
+        ApiResponse(
+            responseCode = "401",
+            description = "Invalid credentials",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))]
+        ),
+        ApiResponse(
+            responseCode = "403",
+            description = "Email verification required or account inactive",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))]
+        ),
+        ApiResponse(
+            responseCode = "400",
+            description = "Invalid request data",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))]
+        )
     ])
+    @SecurityRequirements // No security required — public endpoint
     @PostMapping("/login")
     fun login(@Valid @RequestBody request: LoginRequest): ResponseEntity<*> {
         return when (val result = authenticationService.authenticate(request.email, request.password)) {
@@ -58,13 +78,13 @@ class AuthController(
             }
             is AuthenticationResult.EmailNotVerified -> 
                 ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(mapOf("error" to "EMAIL_NOT_VERIFIED", "message" to "Email verification required. Please check your email and verify your account.", "statusCode" to 403))
+                    .body(ErrorResponse(error = "EMAIL_NOT_VERIFIED", message = "Email verification required. Please check your email and verify your account.", statusCode = 403))
             is AuthenticationResult.AccountInactive -> 
                 ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(mapOf("error" to "ACCOUNT_INACTIVE", "message" to "Account is inactive. Please verify your email to activate your account.", "statusCode" to 403))
+                    .body(ErrorResponse(error = "ACCOUNT_INACTIVE", message = "Account is inactive. Please verify your email to activate your account.", statusCode = 403))
             is AuthenticationResult.Failure -> 
                 ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(mapOf("error" to "INVALID_CREDENTIALS", "message" to result.message, "statusCode" to 401))
+                    .body(ErrorResponse(error = "INVALID_CREDENTIALS", message = result.message, statusCode = 401))
         }
     }
 
@@ -73,10 +93,23 @@ class AuthController(
         description = "Registers a new user in the system"
     )
     @ApiResponses(value = [
-        ApiResponse(responseCode = "201", description = "User registered successfully"),
-        ApiResponse(responseCode = "400", description = "Invalid registration data or password validation failed"),
-        ApiResponse(responseCode = "409", description = "User with this email already exists")
+        ApiResponse(
+            responseCode = "201",
+            description = "User registered successfully",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = RegisterResponse::class))]
+        ),
+        ApiResponse(
+            responseCode = "400",
+            description = "Invalid registration data or password validation failed",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))]
+        ),
+        ApiResponse(
+            responseCode = "409",
+            description = "User with this email already exists",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))]
+        )
     ])
+    @SecurityRequirements // No security required — public endpoint
     @PostMapping("/register")
     fun register(@Valid @RequestBody request: RegisterRequest): ResponseEntity<*> {
         val command = RegisterUserCommand(
@@ -96,7 +129,7 @@ class AuthController(
             is RegisterResult.Failure -> {
                 val status = if (result.message.contains("already exists")) HttpStatus.CONFLICT else HttpStatus.BAD_REQUEST
                 ResponseEntity.status(status)
-                    .body(mapOf("error" to "REGISTRATION_FAILED", "message" to result.message))
+                    .body(ErrorResponse(error = "REGISTRATION_FAILED", message = result.message))
             }
         }
     }

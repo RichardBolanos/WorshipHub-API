@@ -1,5 +1,7 @@
 package com.worshiphub.application.organization
 
+import com.worshiphub.application.notification.NotificationPreferencesService
+import com.worshiphub.application.notification.UserRoleResolver
 import com.worshiphub.domain.collaboration.Notification
 import com.worshiphub.domain.collaboration.NotificationType
 import com.worshiphub.domain.collaboration.repository.NotificationRepository
@@ -56,9 +58,13 @@ class OrganizationApplicationServicePropertyTest : FreeSpec({
         val notificationRepository = mockk<NotificationRepository>()
         val serviceEventRepository = mockk<ServiceEventRepository>()
         val userAvailabilityRepository = mockk<UserAvailabilityRepository>()
+        val eventPublisher = mockk<org.springframework.context.ApplicationEventPublisher>(relaxed = true)
+        val notificationPreferencesService = mockk<NotificationPreferencesService>(relaxed = true)
+        val userRoleResolver = mockk<UserRoleResolver>(relaxed = true)
         val service = OrganizationApplicationService(
             userRepository, churchRepository, teamRepository, teamMemberRepository,
-            notificationRepository, serviceEventRepository, userAvailabilityRepository
+            notificationRepository, serviceEventRepository, userAvailabilityRepository, eventPublisher,
+            notificationPreferencesService, userRoleResolver
         )
         return ServiceMocks(
             service, teamRepository, teamMemberRepository,

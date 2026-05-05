@@ -3,10 +3,12 @@ package com.worshiphub.application.auth
 import com.worshiphub.domain.auth.InvitationToken
 import com.worshiphub.domain.auth.repository.InvitationTokenRepository
 import com.worshiphub.domain.auth.service.TokenGenerationService
+import com.worshiphub.domain.collaboration.push.PushEvent
 import com.worshiphub.domain.organization.User
 import com.worshiphub.domain.organization.UserRole
 import com.worshiphub.domain.organization.repository.ChurchRepository
 import com.worshiphub.domain.organization.repository.UserRepository
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -25,7 +27,8 @@ class InvitationService(
     private val emailService: EmailService,
     private val passwordEncoder: PasswordEncoder,
     private val passwordValidator: PasswordValidator,
-    private val rateLimitService: InvitationRateLimitService
+    private val rateLimitService: InvitationRateLimitService,
+    private val eventPublisher: ApplicationEventPublisher
 ) {
     
     /**
@@ -87,7 +90,7 @@ class InvitationService(
             invitationToken = invitation.token
         )
         
-        return InvitationResult.Success(invitation.id)
+        return InvitationResult.Success(invitation.id, invitation.token)
     }
     
     /**
@@ -141,7 +144,17 @@ class InvitationService(
         // Invalidate all other invitations for this email
         invitationTokenRepository.invalidateAllInvitationsForEmail(invitation.email)
         
-        return InvitationResult.Success(savedUser.id)
+        // Publish push event for invitation accepted (notify the admin who sent the invitation)
+        eventPublisher.publishEvent(
+            PushEvent.InvitationAccepted(
+                recipientUserIds = listOf(invitation.invitedBy),
+                newMemberName = "${invitation.firstName} ${invitation.lastName}",
+                newMemberEmail = invitation.email,
+                acceptedRole = invitation.role.name
+            )
+        )
+        
+        return InvitationResult.Success(savedUser.id, token)
     }
     
     /**
@@ -193,7 +206,7 @@ data class SendInvitationCommand(
  * Results for invitation operations.
  */
 sealed class InvitationResult {
-    data class Success(val id: UUID) : InvitationResult()
+    data class Success(val id: UUID, val token: String) : InvitationResult()
     object UserAlreadyExists : InvitationResult()
     object ChurchNotFound : InvitationResult()
     object InviterNotFound : InvitationResult()

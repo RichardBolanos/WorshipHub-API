@@ -2,6 +2,7 @@ package com.worshiphub.infrastructure.repository
 
 import com.worshiphub.domain.organization.User
 import com.worshiphub.domain.organization.repository.UserRepository
+import jakarta.persistence.EntityManager
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import java.util.*
@@ -15,10 +16,18 @@ interface JpaUserRepository : JpaRepository<User, UUID> {
 
 @Repository
 open class UserRepositoryImpl(
-    private val jpaRepository: JpaUserRepository
+    private val jpaRepository: JpaUserRepository,
+    private val entityManager: EntityManager
 ) : UserRepository {
     
-    override fun save(user: User): User = jpaRepository.save(user)
+    override fun save(user: User): User {
+        return if (jpaRepository.existsById(user.id)) {
+            jpaRepository.save(user)
+        } else {
+            entityManager.persist(user)
+            user
+        }
+    }
     
     override fun findById(id: UUID): User? = 
         jpaRepository.findById(id).orElse(null)

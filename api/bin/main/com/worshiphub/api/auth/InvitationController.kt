@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
+import io.swagger.v3.oas.annotations.security.SecurityRequirements
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
@@ -29,7 +31,8 @@ class InvitationController(
 
     @Operation(
         summary = "Send invitation",
-        description = "Sends an invitation to join the church organization"
+        description = "Sends an invitation to join the church organization",
+        security = [SecurityRequirement(name = "bearerAuth")]
     )
     @ApiResponses(value = [
         ApiResponse(responseCode = "201", description = "Invitation sent successfully"),
@@ -59,6 +62,7 @@ class InvitationController(
                 ResponseEntity.status(HttpStatus.CREATED).body(
                     InvitationResponse(
                         invitationId = result.id,
+                        token = result.token,
                         message = "Invitation sent successfully"
                     )
                 )
@@ -97,6 +101,7 @@ class InvitationController(
         ApiResponse(responseCode = "400", description = "Invalid or expired invitation"),
         ApiResponse(responseCode = "404", description = "Invitation not found")
     ])
+    @SecurityRequirements // No security required — public endpoint
     @GetMapping("/{token}")
     fun getInvitationDetails(
         @Parameter(description = "Invitation token", required = true)
@@ -137,6 +142,7 @@ class InvitationController(
         ApiResponse(responseCode = "404", description = "Invitation not found"),
         ApiResponse(responseCode = "409", description = "User already exists")
     ])
+    @SecurityRequirements // No security required — public endpoint
     @PostMapping("/{token}/accept")
     @ResponseStatus(HttpStatus.CREATED)
     fun acceptInvitation(
@@ -204,6 +210,7 @@ data class AcceptInvitationRequest(
 data class InvitationResponse(
     val invitationId: UUID? = null,
     val userId: UUID? = null,
+    val token: String? = null,
     val message: String
 )
 

@@ -1,7 +1,10 @@
 package com.worshiphub.application.organization
 
+import com.worshiphub.application.notification.NotificationPreferencesService
+import com.worshiphub.application.notification.UserRoleResolver
 import com.worshiphub.domain.collaboration.Notification
 import com.worshiphub.domain.collaboration.NotificationType
+import com.worshiphub.domain.collaboration.push.PushEvent
 import com.worshiphub.domain.collaboration.repository.NotificationRepository
 import com.worshiphub.domain.organization.Church
 import com.worshiphub.domain.organization.Team
@@ -15,6 +18,7 @@ import com.worshiphub.domain.organization.repository.TeamMemberRepository
 import com.worshiphub.domain.scheduling.ConfirmationStatus
 import com.worshiphub.domain.scheduling.repository.ServiceEventRepository
 import com.worshiphub.domain.scheduling.repository.UserAvailabilityRepository
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -32,7 +36,10 @@ open class OrganizationApplicationService(
     private val teamMemberRepository: TeamMemberRepository,
     private val notificationRepository: NotificationRepository,
     private val serviceEventRepository: ServiceEventRepository,
-    private val userAvailabilityRepository: UserAvailabilityRepository
+    private val userAvailabilityRepository: UserAvailabilityRepository,
+    private val eventPublisher: ApplicationEventPublisher,
+    private val notificationPreferencesService: NotificationPreferencesService,
+    private val userRoleResolver: UserRoleResolver
 ) {
 
     /**
@@ -146,6 +153,27 @@ open class OrganizationApplicationService(
                         )
                     )
                 }
+
+                // Publish push event for team leader change
+                val recipientIds = members.map { it.userId }
+                if (recipientIds.isNotEmpty()) {
+                    eventPublisher.publishEvent(
+                        PushEvent.TeamMemberChange(
+                            recipientUserIds = recipientIds,
+                            teamName = savedTeam.name,
+                            changeDescription = "The leader of team '${savedTeam.name}' has been changed.",
+                            teamId = command.teamId,
+                            notificationType = NotificationType.TEAM_LEADER_CHANGED
+                        )
+                    )
+                }
+
+                // Notify preference service about role changes for new and previous leaders
+                val newLeaderRole = userRoleResolver.resolveEffectiveRole(command.leaderId)
+                notificationPreferencesService.onRoleChanged(command.leaderId, newLeaderRole)
+
+                val previousLeaderRole = userRoleResolver.resolveEffectiveRole(existingTeam.leaderId)
+                notificationPreferencesService.onRoleChanged(existingTeam.leaderId, previousLeaderRole)
             }
 
             Result.success(savedTeam)
@@ -209,6 +237,20 @@ open class OrganizationApplicationService(
                 )
             }
 
+            // Publish push event for team member added
+            val recipientIds = currentMembers.map { it.userId }
+            if (recipientIds.isNotEmpty()) {
+                eventPublisher.publishEvent(
+                    PushEvent.TeamMemberChange(
+                        recipientUserIds = recipientIds,
+                        teamName = teamName,
+                        changeDescription = "A new member has been added to '$teamName'.",
+                        teamId = command.teamId,
+                        notificationType = NotificationType.TEAM_MEMBER_ADDED
+                    )
+                )
+            }
+
             Result.success(savedTeamMember.id)
         } catch (e: Exception) {
             Result.failure(RuntimeException("Failed to assign team member", e))
@@ -238,6 +280,20 @@ open class OrganizationApplicationService(
                         title = "Team Member Removed",
                         message = "A member has been removed from '$teamName'.",
                         type = NotificationType.TEAM_MEMBER_REMOVED
+                    )
+                )
+            }
+
+            // Publish push event for team member removed
+            val recipientIds = remainingMembers.map { it.userId }
+            if (recipientIds.isNotEmpty()) {
+                eventPublisher.publishEvent(
+                    PushEvent.TeamMemberChange(
+                        recipientUserIds = recipientIds,
+                        teamName = teamName,
+                        changeDescription = "A member has been removed from '$teamName'.",
+                        teamId = teamId,
+                        notificationType = NotificationType.TEAM_MEMBER_REMOVED
                     )
                 )
             }
@@ -276,6 +332,21 @@ open class OrganizationApplicationService(
             isEmailVerified = false
         )
         val savedUser = userRepository.save(user)
+
+        // Publish push event for church invitation if the invited user already exists in the system
+        val existingUser = userRepository.findByEmail(command.email)
+        if (existingUser != null && existingUser.id != savedUser.id) {
+            val church = churchRepository.findById(command.churchId)
+            val churchName = church?.name ?: "a church"
+            eventPublisher.publishEvent(
+                PushEvent.ChurchInvitation(
+                    recipientUserIds = listOf(existingUser.id),
+                    churchName = churchName,
+                    offeredRole = command.role.name
+                )
+            )
+        }
+
         return savedUser.id
     }
 
@@ -303,6 +374,21 @@ open class OrganizationApplicationService(
                     type = NotificationType.TEAM_ROLE_CHANGED
                 )
             )
+
+            // Publish push event for team role change
+            eventPublisher.publishEvent(
+                PushEvent.TeamMemberChange(
+                    recipientUserIds = listOf(userId),
+                    teamName = teamName,
+                    changeDescription = "Your role in '$teamName' has been changed to ${role.name}.",
+                    teamId = teamId,
+                    notificationType = NotificationType.TEAM_ROLE_CHANGED
+                )
+            )
+
+            // Notify preference service about role change
+            val newEffectiveRole = userRoleResolver.resolveEffectiveRole(userId)
+            notificationPreferencesService.onRoleChanged(userId, newEffectiveRole)
 
             Result.success(Unit)
         } catch (e: Exception) {

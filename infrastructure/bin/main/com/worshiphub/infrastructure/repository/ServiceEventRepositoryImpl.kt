@@ -1,6 +1,7 @@
 package com.worshiphub.infrastructure.repository
 
 import com.worshiphub.domain.scheduling.ServiceEvent
+import com.worshiphub.domain.scheduling.ServiceEventStatus
 import com.worshiphub.domain.scheduling.repository.ServiceEventRepository
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
@@ -19,6 +20,12 @@ interface JpaServiceEventRepository : JpaRepository<ServiceEvent, UUID> {
     fun findUpcomingByTeamId(teamId: UUID): List<ServiceEvent>
     
     fun findByParentServiceId(parentServiceId: UUID): List<ServiceEvent>
+
+    @Query("SELECT s FROM ServiceEvent s LEFT JOIN FETCH s.assignedMembers WHERE s.status IN :statuses AND s.scheduledDate BETWEEN :startDate AND :endDate")
+    fun findByStatusesAndDateRange(statuses: List<ServiceEventStatus>, startDate: LocalDateTime, endDate: LocalDateTime): List<ServiceEvent>
+
+    @Query("SELECT s FROM ServiceEvent s LEFT JOIN FETCH s.assignedMembers WHERE s.setlistId = :setlistId AND s.scheduledDate > :after")
+    fun findBySetlistIdAndScheduledDateAfter(setlistId: UUID, after: LocalDateTime): List<ServiceEvent>
 }
 
 @Repository
@@ -39,6 +46,12 @@ open class ServiceEventRepositoryImpl(
     
     override fun findByParentServiceId(parentServiceId: UUID): List<ServiceEvent> = 
         jpaRepository.findByParentServiceId(parentServiceId)
+
+    override fun findByStatusesAndDateRange(statuses: List<ServiceEventStatus>, startDate: LocalDateTime, endDate: LocalDateTime): List<ServiceEvent> =
+        jpaRepository.findByStatusesAndDateRange(statuses, startDate, endDate)
+
+    override fun findBySetlistIdAndScheduledDateAfter(setlistId: UUID, after: LocalDateTime): List<ServiceEvent> =
+        jpaRepository.findBySetlistIdAndScheduledDateAfter(setlistId, after)
     
     override fun delete(serviceEvent: ServiceEvent) = jpaRepository.delete(serviceEvent)
     

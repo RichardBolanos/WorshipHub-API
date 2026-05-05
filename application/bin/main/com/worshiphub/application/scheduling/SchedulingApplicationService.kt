@@ -1,11 +1,14 @@
 package com.worshiphub.application.scheduling
 
+import com.worshiphub.domain.collaboration.push.PushEvent
 import com.worshiphub.domain.scheduling.*
 import com.worshiphub.domain.scheduling.repository.ServiceEventRepository
 import com.worshiphub.domain.scheduling.repository.SetlistRepository
 import com.worshiphub.domain.scheduling.repository.UserAvailabilityRepository
+import com.worshiphub.domain.organization.repository.TeamMemberRepository
 import com.worshiphub.domain.organization.repository.TeamRepository
 import com.worshiphub.domain.organization.repository.UserRepository
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -23,7 +26,9 @@ open class SchedulingApplicationService(
     private val setlistRepository: SetlistRepository,
     private val userAvailabilityRepository: UserAvailabilityRepository,
     private val teamRepository: TeamRepository,
-    private val userRepository: UserRepository
+    private val teamMemberRepository: TeamMemberRepository,
+    private val userRepository: UserRepository,
+    private val eventPublisher: ApplicationEventPublisher
 ) {
     
     /**
@@ -103,6 +108,20 @@ open class SchedulingApplicationService(
             val publishedService = withMembers.publish()
             serviceEventRepository.save(publishedService)
             
+            // Publish push event for service assignment
+            val recipientIds = command.memberAssignments.map { it.userId }
+            if (recipientIds.isNotEmpty()) {
+                val roles = command.memberAssignments.associate { it.userId to it.role }
+                eventPublisher.publishEvent(
+                    PushEvent.ServiceAssignment(
+                        recipientUserIds = recipientIds,
+                        serviceName = command.serviceName,
+                        scheduledDate = command.scheduledDate,
+                        roles = roles
+                    )
+                )
+            }
+            
             Result.success(publishedService.id)
         } catch (e: Exception) {
             Result.failure(RuntimeException("Failed to schedule service: ${e.message}", e))
@@ -151,6 +170,22 @@ open class SchedulingApplicationService(
             val updatedServiceEvent = serviceEvent.copy(assignedMembers = updatedMembers)
             serviceEventRepository.save(updatedServiceEvent)
             
+            // Publish push event for invitation response (notify team leader)
+            val team = teamRepository.findById(serviceEvent.teamId)
+            if (team != null) {
+                val respondingUser = userRepository.findById(command.userId)
+                val memberName = respondingUser?.let { "${it.firstName} ${it.lastName}" } ?: "Unknown"
+                eventPublisher.publishEvent(
+                    PushEvent.InvitationResponse(
+                        recipientUserIds = listOf(team.leaderId),
+                        memberName = memberName,
+                        serviceName = serviceEvent.name,
+                        scheduledDate = serviceEvent.scheduledDate,
+                        accepted = command.response == ConfirmationStatus.ACCEPTED
+                    )
+                )
+            }
+            
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(RuntimeException("Failed to respond to invitation: ${e.message}", e))
@@ -188,6 +223,26 @@ open class SchedulingApplicationService(
         )
         
         val savedAvailability = userAvailabilityRepository.save(availability)
+
+        // Publish push event for member unavailable (notify team leaders)
+        val user = userRepository.findById(command.userId)
+        val memberName = user?.let { "${it.firstName} ${it.lastName}" } ?: "Unknown"
+        val teamMemberships = teamMemberRepository.findByUserId(command.userId)
+        val leaderIds = teamMemberships
+            .mapNotNull { membership -> teamRepository.findById(membership.teamId)?.leaderId }
+            .distinct()
+            .filter { it != command.userId }
+        if (leaderIds.isNotEmpty()) {
+            eventPublisher.publishEvent(
+                PushEvent.MemberUnavailable(
+                    recipientUserIds = leaderIds,
+                    memberName = memberName,
+                    unavailableDate = command.unavailableDate,
+                    reason = command.reason
+                )
+            )
+        }
+
         return savedAvailability.id
     }
     
@@ -245,6 +300,22 @@ open class SchedulingApplicationService(
                 serviceEventRepository.save(childService)
             }
 
+            // Publish push event for recurring service creation
+            val recipientIds = command.memberAssignments.map { it.userId }
+            if (recipientIds.isNotEmpty()) {
+                val allDates = listOf(command.scheduledDate) + dates
+                val roles = command.memberAssignments.associate { it.userId to it.role }
+                eventPublisher.publishEvent(
+                    PushEvent.RecurringServiceCreated(
+                        recipientUserIds = recipientIds,
+                        serviceName = command.serviceName,
+                        scheduledDates = allDates,
+                        recurrencePattern = command.recurrenceRule.frequency.name,
+                        roles = roles
+                    )
+                )
+            }
+
             Result.success(savedParent.id)
         } catch (e: Exception) {
             Result.failure(RuntimeException("Failed to create recurring service: ${e.message}", e))
@@ -275,6 +346,7 @@ open class SchedulingApplicationService(
                 child.scheduledDate.isAfter(now) &&
                     child.assignedMembers.none { it.confirmationStatus == ConfirmationStatus.ACCEPTED }
             }
+            val removedDates = toDelete.map { it.scheduledDate }
             if (toDelete.isNotEmpty()) {
                 serviceEventRepository.deleteAll(toDelete)
             }
@@ -295,6 +367,7 @@ open class SchedulingApplicationService(
                 .map { it.scheduledDate }
                 .toSet()
 
+            val newDates = mutableListOf<LocalDateTime>()
             for (date in dates) {
                 if (date.isAfter(now) && date !in preservedDates) {
                     val childService = ServiceEvent(
@@ -305,7 +378,26 @@ open class SchedulingApplicationService(
                         parentServiceId = serviceId
                     )
                     serviceEventRepository.save(childService)
+                    newDates.add(date)
                 }
+            }
+
+            // Publish push event for recurrence rule update
+            // Notify all members assigned to future instances (preserved ones)
+            val recipientIds = children
+                .filter { it.scheduledDate.isAfter(now) }
+                .flatMap { it.assignedMembers.map { m -> m.userId } }
+                .distinct()
+            if (recipientIds.isNotEmpty()) {
+                eventPublisher.publishEvent(
+                    PushEvent.RecurrenceRuleUpdated(
+                        recipientUserIds = recipientIds,
+                        parentServiceName = parentService.name,
+                        newRecurrencePattern = newRule.frequency.name,
+                        affectedDates = newDates + preservedDates.toList(),
+                        removedDates = removedDates
+                    )
+                )
             }
 
             Result.success(Unit)
@@ -325,6 +417,13 @@ open class SchedulingApplicationService(
                 ?: return Result.failure(IllegalArgumentException("Service event not found: $serviceId"))
 
             val children = serviceEventRepository.findByParentServiceId(serviceId)
+
+            // Collect all affected members and dates before deletion for the push event
+            val allInstances = listOf(parentService) + children
+            val affectedDates = allInstances.map { it.scheduledDate }
+            val recipientIds = allInstances
+                .flatMap { it.assignedMembers.map { m -> m.userId } }
+                .distinct()
 
             // Delete child instances that are DRAFT/PUBLISHED and have no ACCEPTED members
             val deletable = children.filter { child ->
@@ -354,9 +453,56 @@ open class SchedulingApplicationService(
                 serviceEventRepository.delete(parentService)
             }
 
+            // Publish push event for recurring service deletion
+            if (recipientIds.isNotEmpty()) {
+                eventPublisher.publishEvent(
+                    PushEvent.RecurringServiceDeleted(
+                        recipientUserIds = recipientIds,
+                        serviceName = parentService.name,
+                        affectedDates = affectedDates,
+                        reason = null
+                    )
+                )
+            }
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(RuntimeException("Failed to delete recurring service: ${e.message}", e))
+        }
+    }
+
+    /**
+     * Cancels a service event and notifies all assigned members.
+     *
+     * @param serviceId ID of the service event to cancel
+     * @param reason Optional reason for cancellation
+     * @return Result indicating success or failure
+     */
+    @Transactional
+    open fun cancelService(serviceId: UUID, reason: String? = null): Result<Unit> {
+        return try {
+            val serviceEvent = serviceEventRepository.findById(serviceId)
+                ?: return Result.failure(IllegalArgumentException("Service event not found: $serviceId"))
+
+            val cancelledService = serviceEvent.cancel()
+            serviceEventRepository.save(cancelledService)
+
+            // Publish push event for service cancellation
+            val recipientIds = serviceEvent.assignedMembers.map { it.userId }
+            if (recipientIds.isNotEmpty()) {
+                eventPublisher.publishEvent(
+                    PushEvent.ServiceCancelled(
+                        recipientUserIds = recipientIds,
+                        serviceName = serviceEvent.name,
+                        originalDate = serviceEvent.scheduledDate,
+                        reason = reason
+                    )
+                )
+            }
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(RuntimeException("Failed to cancel service: ${e.message}", e))
         }
     }
 
@@ -373,7 +519,27 @@ open class SchedulingApplicationService(
             return Result.failure(SecurityException("No tiene permiso para eliminar este registro"))
         }
 
+        val unavailableDate = availability.unavailableDate
         userAvailabilityRepository.delete(availability)
+
+        // Publish push event for member available again (notify team leaders)
+        val user = userRepository.findById(command.userId)
+        val memberName = user?.let { "${it.firstName} ${it.lastName}" } ?: "Unknown"
+        val teamMemberships = teamMemberRepository.findByUserId(command.userId)
+        val leaderIds = teamMemberships
+            .mapNotNull { membership -> teamRepository.findById(membership.teamId)?.leaderId }
+            .distinct()
+            .filter { it != command.userId }
+        if (leaderIds.isNotEmpty()) {
+            eventPublisher.publishEvent(
+                PushEvent.MemberAvailableAgain(
+                    recipientUserIds = leaderIds,
+                    memberName = memberName,
+                    previouslyUnavailableDate = unavailableDate
+                )
+            )
+        }
+
         return Result.success(Unit)
     }
 
@@ -503,6 +669,9 @@ open class SchedulingApplicationService(
         
         val updatedSetlist = setlist.copy(songIds = updatedSongIds)
         setlistRepository.save(updatedSetlist)
+        
+        // Publish push event for setlist modification
+        publishSetlistModifiedEvent(setlistId, setlist.name, "Song added to setlist")
     }
     
     @Transactional
@@ -513,6 +682,9 @@ open class SchedulingApplicationService(
         val updatedSongIds = setlist.songIds.filter { it != songId }
         val updatedSetlist = setlist.copy(songIds = updatedSongIds)
         setlistRepository.save(updatedSetlist)
+        
+        // Publish push event for setlist modification
+        publishSetlistModifiedEvent(setlistId, setlist.name, "Song removed from setlist")
     }
     
     @Transactional
@@ -522,6 +694,9 @@ open class SchedulingApplicationService(
         
         val updatedSetlist = setlist.copy(songIds = songOrder)
         setlistRepository.save(updatedSetlist)
+        
+        // Publish push event for setlist modification
+        publishSetlistModifiedEvent(setlistId, setlist.name, "Setlist songs reordered")
     }
     
     fun getSetlistDetails(setlistId: UUID): Map<String, Any> {
@@ -573,6 +748,9 @@ open class SchedulingApplicationService(
         )
         
         setlistRepository.save(updatedSetlist)
+        
+        // Publish push event for setlist modification
+        publishSetlistModifiedEvent(id, name, "Setlist updated")
     }
     
     fun deleteSetlist(id: UUID, churchId: UUID) {
@@ -584,5 +762,33 @@ open class SchedulingApplicationService(
         }
         
         setlistRepository.delete(id)
+    }
+
+    /**
+     * Publishes a SetlistModified push event to all members assigned to future services
+     * that use the given setlist.
+     */
+    private fun publishSetlistModifiedEvent(setlistId: UUID, setlistName: String, changeSummary: String) {
+        val futureServices = serviceEventRepository.findBySetlistIdAndScheduledDateAfter(
+            setlistId, LocalDateTime.now()
+        )
+        if (futureServices.isEmpty()) return
+
+        val recipientIds = futureServices
+            .flatMap { it.assignedMembers.map { m -> m.userId } }
+            .distinct()
+        if (recipientIds.isEmpty()) return
+
+        // Use the first future service for context
+        val firstService = futureServices.first()
+        eventPublisher.publishEvent(
+            PushEvent.SetlistModified(
+                recipientUserIds = recipientIds,
+                serviceName = firstService.name,
+                scheduledDate = firstService.scheduledDate,
+                changeSummary = changeSummary,
+                serviceId = firstService.id
+            )
+        )
     }
 }

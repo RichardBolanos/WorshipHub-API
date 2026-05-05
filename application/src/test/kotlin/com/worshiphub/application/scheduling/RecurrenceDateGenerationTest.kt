@@ -24,7 +24,9 @@ class RecurrenceDateGenerationTest {
         setlistRepository = mockk<SetlistRepository>(),
         userAvailabilityRepository = mockk<UserAvailabilityRepository>(),
         teamRepository = mockk<TeamRepository>(),
-        userRepository = mockk<UserRepository>()
+        teamMemberRepository = mockk<com.worshiphub.domain.organization.repository.TeamMemberRepository>(relaxed = true),
+        userRepository = mockk<UserRepository>(),
+        eventPublisher = mockk<org.springframework.context.ApplicationEventPublisher>(relaxed = true)
     )
 
     // ── WEEKLY frequency ──

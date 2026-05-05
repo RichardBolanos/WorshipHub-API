@@ -5,9 +5,13 @@ import com.worshiphub.domain.catalog.Song
 import com.worshiphub.domain.catalog.Tag
 import com.worshiphub.domain.catalog.repository.AttachmentRepository
 import com.worshiphub.domain.catalog.repository.CategoryRepository
+import com.worshiphub.domain.catalog.repository.GlobalSongRepository
 import com.worshiphub.domain.catalog.repository.SongRepository
 import com.worshiphub.domain.catalog.repository.TagRepository
 import com.worshiphub.domain.collaboration.repository.SongCommentRepository
+import com.worshiphub.domain.organization.repository.UserRepository
+import com.worshiphub.domain.scheduling.repository.ServiceEventRepository
+import com.worshiphub.domain.scheduling.repository.SetlistRepository
 import io.kotest.common.ExperimentalKotest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.result.shouldBeFailure
@@ -22,6 +26,7 @@ import io.kotest.property.checkAll
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import org.springframework.context.ApplicationEventPublisher
 import java.util.*
 
 /**
@@ -102,13 +107,23 @@ class SongAssociationsPropertyTest : FunSpec({
             val categoryRepository = mockk<CategoryRepository>()
             val attachmentRepository = mockk<AttachmentRepository>()
             val songCommentRepository = mockk<SongCommentRepository>()
+            val globalSongRepository = mockk<GlobalSongRepository>()
+            val eventPublisher = mockk<ApplicationEventPublisher>(relaxed = true)
+            val userRepository = mockk<UserRepository>()
+            val serviceEventRepository = mockk<ServiceEventRepository>()
+            val setlistRepository = mockk<SetlistRepository>()
 
             val service = CatalogApplicationService(
                 songRepository,
                 categoryRepository,
                 tagRepository,
                 attachmentRepository,
-                songCommentRepository
+                songCommentRepository,
+                globalSongRepository,
+                eventPublisher,
+                userRepository,
+                serviceEventRepository,
+                setlistRepository
             )
 
             // No duplicates
@@ -189,13 +204,23 @@ class SongAssociationsPropertyTest : FunSpec({
             val categoryRepository = mockk<CategoryRepository>()
             val attachmentRepository = mockk<AttachmentRepository>()
             val songCommentRepository = mockk<SongCommentRepository>()
+            val globalSongRepository = mockk<GlobalSongRepository>()
+            val eventPublisher = mockk<ApplicationEventPublisher>(relaxed = true)
+            val userRepository = mockk<UserRepository>()
+            val serviceEventRepository = mockk<ServiceEventRepository>()
+            val setlistRepository = mockk<SetlistRepository>()
 
             val service = CatalogApplicationService(
                 songRepository,
                 categoryRepository,
                 tagRepository,
                 attachmentRepository,
-                songCommentRepository
+                songCommentRepository,
+                globalSongRepository,
+                eventPublisher,
+                userRepository,
+                serviceEventRepository,
+                setlistRepository
             )
 
             // No duplicates
@@ -286,13 +311,23 @@ class SongAssociationsPropertyTest : FunSpec({
             val categoryRepository = mockk<CategoryRepository>()
             val attachmentRepository = mockk<AttachmentRepository>()
             val songCommentRepository = mockk<SongCommentRepository>()
+            val globalSongRepository = mockk<GlobalSongRepository>()
+            val eventPublisher = mockk<ApplicationEventPublisher>(relaxed = true)
+            val userRepository = mockk<UserRepository>()
+            val serviceEventRepository = mockk<ServiceEventRepository>()
+            val setlistRepository = mockk<SetlistRepository>()
 
             val service = CatalogApplicationService(
                 songRepository,
                 categoryRepository,
                 tagRepository,
                 attachmentRepository,
-                songCommentRepository
+                songCommentRepository,
+                globalSongRepository,
+                eventPublisher,
+                userRepository,
+                serviceEventRepository,
+                setlistRepository
             )
 
             // All random UUIDs return null (not found)
@@ -396,13 +431,23 @@ class SongAssociationsPropertyTest : FunSpec({
             val categoryRepository = mockk<CategoryRepository>()
             val attachmentRepository = mockk<AttachmentRepository>()
             val songCommentRepository = mockk<SongCommentRepository>()
+            val globalSongRepository = mockk<GlobalSongRepository>()
+            val eventPublisher = mockk<ApplicationEventPublisher>(relaxed = true)
+            val userRepository = mockk<UserRepository>()
+            val serviceEventRepository = mockk<ServiceEventRepository>()
+            val setlistRepository = mockk<SetlistRepository>()
 
             val service = CatalogApplicationService(
                 songRepository,
                 categoryRepository,
                 tagRepository,
                 attachmentRepository,
-                songCommentRepository
+                songCommentRepository,
+                globalSongRepository,
+                eventPublisher,
+                userRepository,
+                serviceEventRepository,
+                setlistRepository
             )
 
             // No duplicates
@@ -527,13 +572,23 @@ class SongAssociationsPropertyTest : FunSpec({
             val categoryRepository = mockk<CategoryRepository>()
             val attachmentRepository = mockk<AttachmentRepository>()
             val songCommentRepository = mockk<SongCommentRepository>()
+            val globalSongRepository = mockk<GlobalSongRepository>()
+            val eventPublisher = mockk<ApplicationEventPublisher>(relaxed = true)
+            val userRepository = mockk<UserRepository>()
+            val serviceEventRepository = mockk<ServiceEventRepository>()
+            val setlistRepository = mockk<SetlistRepository>()
 
             val service = CatalogApplicationService(
                 songRepository,
                 categoryRepository,
                 tagRepository,
                 attachmentRepository,
-                songCommentRepository
+                songCommentRepository,
+                globalSongRepository,
+                eventPublisher,
+                userRepository,
+                serviceEventRepository,
+                setlistRepository
             )
 
             // Mock filterByCategory to implement correct filtering logic in-memory

@@ -53,10 +53,12 @@ class SchedulingServiceAvailabilityPropertyTest : FunSpec({
         val setlistRepository = mockk<SetlistRepository>()
         val userAvailabilityRepository = mockk<UserAvailabilityRepository>()
         val teamRepository = mockk<TeamRepository>()
-        val userRepository = mockk<UserRepository>()
+        val teamMemberRepository = mockk<com.worshiphub.domain.organization.repository.TeamMemberRepository>(relaxed = true)
+        val userRepository = mockk<UserRepository>(relaxed = true)
         val service = SchedulingApplicationService(
             serviceEventRepository, setlistRepository, userAvailabilityRepository,
-            teamRepository, userRepository
+            teamRepository, teamMemberRepository, userRepository,
+            mockk<org.springframework.context.ApplicationEventPublisher>(relaxed = true)
         )
         return ServiceTestContext(
             service, serviceEventRepository, userAvailabilityRepository, teamRepository

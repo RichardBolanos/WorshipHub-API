@@ -18,9 +18,11 @@ class SchedulingApplicationServiceTest {
     private val setlistRepository = mockk<SetlistRepository>()
     private val userAvailabilityRepository = mockk<UserAvailabilityRepository>()
     private val teamRepository = mockk<TeamRepository>()
+    private val teamMemberRepository = mockk<com.worshiphub.domain.organization.repository.TeamMemberRepository>(relaxed = true)
     private val userRepository = mockk<UserRepository>()
+    private val eventPublisher = mockk<org.springframework.context.ApplicationEventPublisher>(relaxed = true)
     private val schedulingService = SchedulingApplicationService(
-        serviceEventRepository, setlistRepository, userAvailabilityRepository, teamRepository, userRepository
+        serviceEventRepository, setlistRepository, userAvailabilityRepository, teamRepository, teamMemberRepository, userRepository, eventPublisher
     )
 
     @Test

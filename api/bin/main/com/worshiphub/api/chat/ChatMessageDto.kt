@@ -7,7 +7,8 @@ import jakarta.validation.constraints.Size
 import java.time.LocalDateTime
 import java.util.*
 
-@Schema(description = "WebSocket message data for sending team chat messages")
+@Schema(description = "Legacy message data for sending team chat messages (use SendChatMessageRestDto instead)")
+@Deprecated("Use SendChatMessageRestDto with the REST endpoint POST /api/v1/teams/{teamId}/messages")
 data class SendChatMessageDto(
     @field:NotNull
     @Schema(
