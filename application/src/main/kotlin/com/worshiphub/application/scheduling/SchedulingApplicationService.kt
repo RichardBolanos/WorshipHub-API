@@ -60,28 +60,16 @@ open class SchedulingApplicationService(
                 "Team already has a service scheduled within 2 hours of this time"
             }
             
-            // Create service event (without members first)
-            var serviceEvent = ServiceEvent(
-                name = command.serviceName,
-                scheduledDate = command.scheduledDate,
-                teamId = command.teamId,
-                setlistId = command.setlistId,
-                churchId = command.churchId
-            )
+            // Generate service event id upfront so AssignedMember can reference it
+            val serviceEventId = UUID.randomUUID()
             
-            // Persist service event first to satisfy FK constraint
-            val savedServiceEvent = serviceEventRepository.save(serviceEvent)
-            
-            // Validate and create member assignments
-            val assignments = mutableListOf<AssignedMember>()
-            command.memberAssignments.forEach { assignment ->
-                // Validate user exists and belongs to the team
+            // Validate members and build assignments in-memory first (fast-fail before any persist)
+            val assignments = command.memberAssignments.map { assignment ->
                 val user = userRepository.findById(assignment.userId)
                     ?: throw IllegalArgumentException("User not found: ${assignment.userId}")
                 
-                // Check user availability
                 val unavailability = userAvailabilityRepository.findByUserIdAndDate(
-                    assignment.userId, 
+                    assignment.userId,
                     command.scheduledDate.toLocalDate()
                 )
                 if (unavailability != null) {
@@ -90,23 +78,28 @@ open class SchedulingApplicationService(
                     )
                 }
                 
-                // Create assignment with the persisted service event ID
-                assignments.add(AssignedMember(
-                    serviceEventId = savedServiceEvent.id,
+                AssignedMember(
+                    serviceEventId = serviceEventId,
                     userId = assignment.userId,
                     role = assignment.role
-                ))
+                )
             }
             
-            // Add members and save again
-            var withMembers = savedServiceEvent
-            for (member in assignments) {
-                withMembers = withMembers.assignMember(member)
-            }
+            // Build the complete, published service event with all members — single save.
+            // Using cascade = ALL on the @OneToMany relation, Hibernate will persist children
+            // alongside the parent in a single persist() call (no merge() on new children).
+            val serviceEvent = ServiceEvent(
+                id = serviceEventId,
+                name = command.serviceName,
+                scheduledDate = command.scheduledDate,
+                teamId = command.teamId,
+                setlistId = command.setlistId,
+                churchId = command.churchId,
+                assignedMembers = assignments,
+                status = ServiceEventStatus.PUBLISHED
+            )
             
-            // Publish the service to make it visible to team members
-            val publishedService = withMembers.publish()
-            serviceEventRepository.save(publishedService)
+            val savedServiceEvent = serviceEventRepository.save(serviceEvent)
             
             // Publish push event for service assignment
             val recipientIds = command.memberAssignments.map { it.userId }
@@ -122,7 +115,7 @@ open class SchedulingApplicationService(
                 )
             }
             
-            Result.success(publishedService.id)
+            Result.success(savedServiceEvent.id)
         } catch (e: Exception) {
             Result.failure(RuntimeException("Failed to schedule service: ${e.message}", e))
         }
