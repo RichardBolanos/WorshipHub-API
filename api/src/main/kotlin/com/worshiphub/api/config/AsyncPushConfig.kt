@@ -9,13 +9,15 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 import java.util.concurrent.Executor
 
 /**
- * Async and retry configuration for push notification delivery.
+ * Async and retry configuration for background tasks (push notifications, emails).
  *
- * Provides a dedicated ThreadPoolTaskExecutor named "pushNotificationExecutor"
- * so that push notification sends run on a separate thread pool and do not
- * block the caller's request thread.
+ * Provides dedicated ThreadPoolTaskExecutors so that I/O-bound operations
+ * (FCM, SMTP) run on isolated thread pools and never block the request thread.
  *
- * Usage: annotate service methods with @Async("pushNotificationExecutor").
+ * Usage:
+ *   @Async("pushNotificationExecutor")  → for FCM push delivery
+ *   @Async("emailExecutor")             → for SMTP email delivery
+ *   @Async                              → falls back to the default executor below
  */
 @Configuration
 @EnableAsync
@@ -37,6 +39,30 @@ class AsyncPushConfig {
 
         logger.info(
             "Push notification executor configured — core={}, max={}, queue={}",
+            executor.corePoolSize, executor.maxPoolSize, executor.queueCapacity
+        )
+
+        return executor
+    }
+
+    /**
+     * Default executor used by `@Async` (without a name argument). Emails
+     * use this pool — small but bounded so a slow SMTP provider can't exhaust
+     * threads.
+     */
+    @Bean("taskExecutor")
+    fun emailExecutor(): Executor {
+        val executor = ThreadPoolTaskExecutor()
+        executor.corePoolSize = 2
+        executor.maxPoolSize = 4
+        executor.queueCapacity = 50
+        executor.setThreadNamePrefix("email-")
+        executor.setWaitForTasksToCompleteOnShutdown(true)
+        executor.setAwaitTerminationSeconds(15)
+        executor.initialize()
+
+        logger.info(
+            "Email executor configured — core={}, max={}, queue={}",
             executor.corePoolSize, executor.maxPoolSize, executor.queueCapacity
         )
 

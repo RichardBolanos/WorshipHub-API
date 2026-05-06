@@ -6,11 +6,21 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Profile
 import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
+import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
 
 /**
  * Email service implementation using JavaMailSender.
- * Real emails will be sent (or routed to Mailpit in local environment).
+ *
+ * Design notes:
+ * - All public methods are [@Async] so they do NOT block the HTTP request thread.
+ *   A user registering, requesting a password reset, or being invited will get
+ *   their HTTP response back immediately; the email is sent in a background
+ *   thread pool (see AsyncPushConfig).
+ * - Errors during SMTP send are logged but NEVER propagated. A failure to
+ *   deliver an email must NOT roll back the database transaction nor surface
+ *   as an HTTP 500 to the user. The user can always trigger a "resend" from
+ *   the auth UI.
  */
 @Service
 @Profile("!h2")
@@ -22,6 +32,7 @@ class EmailServiceImpl(
     
     private val logger = LoggerFactory.getLogger(EmailServiceImpl::class.java)
     
+    @Async
     override fun sendEmailVerification(email: String, firstName: String, token: String) {
         val verificationUrl = "$baseUrl/api/v1/auth/email/verify/$token"
         
@@ -44,6 +55,7 @@ class EmailServiceImpl(
         )
     }
     
+    @Async
     override fun sendPasswordReset(email: String, firstName: String, token: String) {
         val resetUrl = "$baseUrl/reset-password?token=$token"
         
@@ -67,6 +79,7 @@ class EmailServiceImpl(
         )
     }
     
+    @Async
     override fun sendInvitation(email: String, firstName: String, churchName: String, invitationToken: String) {
         val invitationUrl = "$baseUrl/invitations/$invitationToken"
 
@@ -90,6 +103,7 @@ class EmailServiceImpl(
         )
     }
     
+    @Async
     override fun sendWelcomeEmail(email: String, firstName: String, churchName: String) {
         val text = """
             |Hi $firstName,
@@ -120,10 +134,16 @@ class EmailServiceImpl(
             mailSender.send(message)
             logger.info("Email sent successfully to: {}", sanitizeForLog(to))
         } catch (e: Exception) {
-            logger.error("Failed to send email to {}", sanitizeForLog(to), e)
-            // Depending on requirements, we might throw an exception here
-            // or just log it and continue. For auth flows, we usually want to know if it failed.
-            throw RuntimeException("Failed to send email", e)
+            // SMTP failures must NOT break the surrounding business operation
+            // (e.g. user registration, invitation creation). The user can always
+            // trigger a "resend" flow. We log the failure for ops visibility.
+            logger.error(
+                "Failed to send email to {} (subject='{}'). Email NOT sent — " +
+                    "the user-facing operation continues without rollback.",
+                sanitizeForLog(to),
+                subject,
+                e
+            )
         }
     }
     

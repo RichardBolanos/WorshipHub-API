@@ -84,8 +84,10 @@ spring:
           starttls:
             enable: ${MAIL_SMTP_STARTTLS:true}
             required: ${MAIL_SMTP_STARTTLS:true}
-        # Timeouts para evitar que un SMTP lento bloquee la app
-        connectiontimeout: 5000
+        # Aggressive timeouts — emails are sent asynchronously (see EmailServiceImpl),
+        # so a slow SMTP provider only delays the email, never the user's HTTP response.
+        # If Brevo (or whatever provider) is unreachable we want to know fast.
+        connectiontimeout: 3000
         timeout: 5000
         writetimeout: 5000
 
