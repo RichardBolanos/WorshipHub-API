@@ -38,16 +38,16 @@ data class Song(
             joinColumns = [JoinColumn(name = "song_id")],
             inverseJoinColumns = [JoinColumn(name = "category_id")]
         )
-        val categories: Set<Category> = emptySet(),
+        val categories: Set<Category> = HashSet(),
         @ManyToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE], fetch = FetchType.LAZY)
         @JoinTable(
             name = "song_tags",
             joinColumns = [JoinColumn(name = "song_id")],
             inverseJoinColumns = [JoinColumn(name = "tag_id")]
         )
-        val tags: Set<Tag> = emptySet(),
+        val tags: Set<Tag> = HashSet(),
         @OneToMany(mappedBy = "songId", cascade = [CascadeType.ALL], fetch = FetchType.LAZY)
-        val attachments: List<Attachment> = emptyList(),
+        val attachments: List<Attachment> = ArrayList(),
         @Column(nullable = false) val churchId: UUID,
         @Column(nullable = false) val createdAt: LocalDateTime = LocalDateTime.now()
 ) {

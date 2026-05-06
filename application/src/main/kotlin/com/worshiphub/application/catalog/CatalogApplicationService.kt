@@ -75,7 +75,7 @@ open class CatalogApplicationService(
                     return Result.failure(IllegalArgumentException("Invalid tag IDs: $invalidIds"))
                 }
                 found
-            } ?: emptySet()
+            } ?: HashSet()
 
             // Resolve categories if provided
             val categories = command.categoryIds?.let { ids ->
@@ -86,7 +86,7 @@ open class CatalogApplicationService(
                     return Result.failure(IllegalArgumentException("Invalid category IDs: $invalidIds"))
                 }
                 found
-            } ?: emptySet()
+            } ?: HashSet()
 
             val songWithAssociations = song.copy(tags = tags, categories = categories)
             val savedSong = songRepository.save(songWithAssociations)
@@ -172,7 +172,7 @@ open class CatalogApplicationService(
             // Resolve tags: null = keep existing, empty = remove all, values = resolve
             val tags = command.tagIds?.let { ids ->
                 if (ids.isEmpty()) {
-                    emptySet()
+                    HashSet()
                 } else {
                     val found = ids.mapNotNull { tagRepository.findById(it) }.toSet()
                     if (found.size != ids.size) {
@@ -187,7 +187,7 @@ open class CatalogApplicationService(
             // Resolve categories: null = keep existing, empty = remove all, values = resolve
             val categories = command.categoryIds?.let { ids ->
                 if (ids.isEmpty()) {
-                    emptySet()
+                    HashSet()
                 } else {
                     val found = ids.mapNotNull { categoryRepository.findById(it) }.toSet()
                     if (found.size != ids.size) {
@@ -357,8 +357,18 @@ open class CatalogApplicationService(
     @Transactional
     fun assignCategoriesToSong(songId: UUID, categoryIds: List<UUID>) {
         val song = songRepository.findById(songId) ?: throw IllegalArgumentException("Song not found")
-        val categories = categoryIds.mapNotNull { categoryRepository.findById(it) }.toSet()
-        val updated = song.copy(categories = categories)
+        // Force-initialize lazy collections BEFORE copy() so the new entity does
+        // not carry over PersistentList/PersistentSet wrappers tied to the old
+        // entity's session state. Then wrap the new collections in plain
+        // mutable HashSet/ArrayList instances so Hibernate treats them as new.
+        val categories: Set<Category> = categoryIds
+            .mapNotNull { categoryRepository.findById(it) }
+            .toHashSet()
+        val updated = song.copy(
+            categories = categories,
+            tags = HashSet(song.tags),
+            attachments = ArrayList(song.attachments)
+        )
         songRepository.save(updated)
     }
     
@@ -366,8 +376,14 @@ open class CatalogApplicationService(
     @Transactional
     fun assignTagsToSong(songId: UUID, tagIds: List<UUID>) {
         val song = songRepository.findById(songId) ?: throw IllegalArgumentException("Song not found")
-        val tags = tagIds.mapNotNull { tagRepository.findById(it) }.toSet()
-        val updated = song.copy(tags = tags)
+        val tags: Set<Tag> = tagIds
+            .mapNotNull { tagRepository.findById(it) }
+            .toHashSet()
+        val updated = song.copy(
+            tags = tags,
+            categories = HashSet(song.categories),
+            attachments = ArrayList(song.attachments)
+        )
         songRepository.save(updated)
     }
 
