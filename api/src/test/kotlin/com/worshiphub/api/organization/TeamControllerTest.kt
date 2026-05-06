@@ -2,6 +2,7 @@ package com.worshiphub.api.organization
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ninjasquad.springmockk.MockkBean
+import com.worshiphub.api.support.WebMvcSecurityTestConfig
 import com.worshiphub.application.organization.MemberAvailabilityDTO
 import com.worshiphub.application.organization.OrganizationApplicationService
 import com.worshiphub.application.organization.TeamSummaryDTO
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
@@ -32,6 +34,7 @@ import java.util.*
  */
 @WebMvcTest(TeamController::class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import(WebMvcSecurityTestConfig::class)
 class TeamControllerTest {
 
     @Autowired
@@ -40,7 +43,7 @@ class TeamControllerTest {
     @Autowired
     private lateinit var objectMapper: ObjectMapper
 
-    @MockkBean
+    @MockkBean(relaxed = true)
     private lateinit var organizationApplicationService: OrganizationApplicationService
 
     private val teamId: UUID = UUID.randomUUID()
