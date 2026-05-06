@@ -14,6 +14,13 @@ server:
 # ==============================================================
 app:
   base-url: ${APP_BASE_URL:http://localhost:8080}
+  email:
+    # Sender (From: header) — must be a verified sender in the SMTP provider.
+    # Falls back to spring.mail.username for backward compatibility, but
+    # configuring APP_EMAIL_FROM explicitly is required for providers like
+    # Brevo where the SMTP username is a service account (xxxxx@smtp-brevo.com)
+    # that cannot be used as a sender address.
+    from: ${APP_EMAIL_FROM:}
 
 spring:
   lifecycle:
@@ -58,19 +65,33 @@ spring:
   # ==============================================================
   # EMAIL / SMTP
   # ==============================================================
-  # Variables a configurar en Render:
-  #   SPRING_MAIL_HOST           ej: smtp.gmail.com / smtp.sendgrid.net / smtp.mailgun.org
-  #   SPRING_MAIL_PORT           ej: 587 (STARTTLS) o 465 (SSL)
-  #   SPRING_MAIL_USERNAME       usuario SMTP (tambien usado como remitente "from")
-  #   SPRING_MAIL_PASSWORD       password / API key del proveedor
-  #   MAIL_SMTP_AUTH             true (default en prod)
-  #   MAIL_SMTP_STARTTLS         true (default en prod, usar puerto 587)
+  # IMPORTANTE: separar "credenciales SMTP" de "remitente del email".
+  # Brevo, SendGrid, AWS SES, etc. asignan un usuario SMTP de servicio que NO
+  # debe aparecer como sender. El "From:" del email lo controla APP_EMAIL_FROM.
   #
-  # Proveedores recomendados (gratis o low-cost):
-  #   - SendGrid (100 emails/dia gratis): SPRING_MAIL_HOST=smtp.sendgrid.net,
-  #     SPRING_MAIL_USERNAME=apikey, SPRING_MAIL_PASSWORD=<tu_api_key>
-  #   - Mailgun, Brevo (Sendinblue), AWS SES, Resend
-  #   - Gmail (NO recomendado para prod): requiere "App Password" de cuenta Google
+  # Variables a configurar en Render:
+  #
+  #   --- SMTP (autenticacion) ---
+  #   SPRING_MAIL_HOST       ej: smtp-relay.brevo.com
+  #   SPRING_MAIL_PORT       ej: 587 (STARTTLS) o 2525 (alterno si 587 esta bloqueado)
+  #   SPRING_MAIL_USERNAME   usuario SMTP del proveedor
+  #                          - Brevo: el "Iniciar sesion" del dashboard SMTP
+  #                            (formato xxxxxxx@smtp-brevo.com)
+  #                          - SendGrid: literal "apikey"
+  #                          - AWS SES: el "SMTP username" generado
+  #   SPRING_MAIL_PASSWORD   clave SMTP del proveedor
+  #                          - Brevo: la "Clave SMTP" (nunca tu password de cuenta)
+  #                          - SendGrid: tu API key (SG.xxxxx)
+  #
+  #   --- Remitente ("From:") ---
+  #   APP_EMAIL_FROM         email que aparecera en el campo From del email.
+  #                          DEBE estar verificado como sender en el proveedor.
+  #                          - Brevo: https://app.brevo.com/senders/list
+  #                          ej: noreply@tu-dominio.com o tu_email_personal@gmail.com
+  #
+  #   --- TLS / Auth (defaults sirven para casi todo) ---
+  #   MAIL_SMTP_AUTH         true (default)
+  #   MAIL_SMTP_STARTTLS     true (default, usar puerto 587)
   # ==============================================================
   mail:
     host: ${SPRING_MAIL_HOST}

@@ -27,8 +27,22 @@ import org.springframework.stereotype.Service
 class EmailServiceImpl(
     private val mailSender: JavaMailSender,
     @Value("\${app.base-url:http://localhost:8080}") private val baseUrl: String,
-    @Value("\${spring.mail.username:noreply@worshiphub.com}") private val fromEmail: String
+    // Sender (From: header). MUST be a verified sender in your SMTP provider
+    // (Brevo: https://app.brevo.com/senders/list). It is INTENTIONALLY decoupled
+    // from spring.mail.username — many providers (Brevo, SendGrid, AWS SES) use
+    // a non-routable login like xxxxx@smtp-brevo.com that can never appear as
+    // a real sender address.
+    //
+    // Resolution order:
+    //   1. APP_EMAIL_FROM (preferred, explicit)
+    //   2. spring.mail.username (legacy fallback for providers where login == sender)
+    //   3. noreply@worshiphub.com (last resort default; emails likely rejected)
+    @Value("\${app.email.from:}") private val configuredFrom: String,
+    @Value("\${spring.mail.username:noreply@worshiphub.com}") private val fallbackFrom: String
 ) : EmailService {
+
+    private val fromEmail: String
+        get() = configuredFrom.ifBlank { fallbackFrom }
     
     private val logger = LoggerFactory.getLogger(EmailServiceImpl::class.java)
     
