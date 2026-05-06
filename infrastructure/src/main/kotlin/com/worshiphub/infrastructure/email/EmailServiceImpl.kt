@@ -26,24 +26,21 @@ import org.springframework.stereotype.Service
 @Profile("!h2")
 class EmailServiceImpl(
     private val mailSender: JavaMailSender,
-    @Value("\${app.base-url:http://localhost:8080}") private val baseUrl: String,
+    @Value("\${app.base-url:}") private val baseUrl: String,
     // Sender (From: header). MUST be a verified sender in your SMTP provider
     // (Brevo: https://app.brevo.com/senders/list). It is INTENTIONALLY decoupled
     // from spring.mail.username — many providers (Brevo, SendGrid, AWS SES) use
     // a non-routable login like xxxxx@smtp-brevo.com that can never appear as
     // a real sender address.
     //
-    // Resolution order:
-    //   1. APP_EMAIL_FROM (preferred, explicit)
-    //   2. spring.mail.username (legacy fallback for providers where login == sender)
-    //   3. noreply@worshiphub.com (last resort default; emails likely rejected)
-    @Value("\${app.email.from:}") private val configuredFrom: String,
-    @Value("\${spring.mail.username:noreply@worshiphub.com}") private val fallbackFrom: String
+    // No fallback: if APP_EMAIL_FROM is not set, the application logs a clear
+    // error and skips the send. This is preferable to using a placeholder like
+    // "noreply@worshiphub.com" which would be silently rejected by the SMTP
+    // provider as an unverified sender, leaving operators wondering why
+    // emails do not arrive.
+    @Value("\${app.email.from:}") private val fromEmail: String
 ) : EmailService {
 
-    private val fromEmail: String
-        get() = configuredFrom.ifBlank { fallbackFrom }
-    
     private val logger = LoggerFactory.getLogger(EmailServiceImpl::class.java)
     
     @Async
@@ -138,6 +135,15 @@ class EmailServiceImpl(
     }
 
     private fun sendEmail(to: String, subject: String, text: String) {
+        if (fromEmail.isBlank()) {
+            logger.error(
+                "Cannot send email to {} (subject='{}') — APP_EMAIL_FROM is not configured. " +
+                    "Set it to a verified sender address in your SMTP provider.",
+                sanitizeForLog(to),
+                subject
+            )
+            return
+        }
         try {
             val message = SimpleMailMessage()
             message.from = fromEmail

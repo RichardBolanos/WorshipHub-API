@@ -6,20 +6,26 @@ server:
 # URL PUBLICA DE LA APLICACION
 # ==============================================================
 # Usado para construir links en emails (verificacion, reset password, invitaciones).
-# OBLIGATORIO en prod, sino los emails llevaran a http://localhost:8080.
+# OBLIGATORIO en prod, los emails llevaran links rotos si no se configura.
 #
 # Ejemplos:
-#   APP_BASE_URL=https://worshiphub-api.onrender.com
+#   APP_BASE_URL=https://worshiphub-api-latest.onrender.com
 #   APP_BASE_URL=https://api.worshiphub.com   (dominio personalizado)
 # ==============================================================
 app:
-  base-url: ${APP_BASE_URL:http://localhost:8080}
+  base-url: ${APP_BASE_URL:}
   email:
-    # Sender (From: header) — must be a verified sender in the SMTP provider.
-    # Falls back to spring.mail.username for backward compatibility, but
-    # configuring APP_EMAIL_FROM explicitly is required for providers like
-    # Brevo where the SMTP username is a service account (xxxxx@smtp-brevo.com)
-    # that cannot be used as a sender address.
+    # Remitente (From:) que verán los destinatarios. DEBE ser un sender verificado
+    # en el proveedor SMTP. Si queda en blanco, los emails no se envian (se loguea
+    # un error claro), evitando intentos silenciosos que el proveedor rechazaria.
+    #
+    # Por que esta separado de spring.mail.username:
+    #   Brevo, SendGrid, AWS SES y otros usan logins SMTP de servicio
+    #   (ej: aa764e001@smtp-brevo.com) que NO pueden aparecer como sender real.
+    #
+    # Como configurarlo en Render:
+    #   APP_EMAIL_FROM=tu_email_verificado@hotmail.com
+    #   APP_EMAIL_FROM=noreply@tu-dominio.com  (si tienes dominio propio verificado)
     from: ${APP_EMAIL_FROM:}
 
 spring:
