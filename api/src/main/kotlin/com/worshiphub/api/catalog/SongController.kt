@@ -467,6 +467,7 @@ class SongController(
                 @PathVariable id: UUID,
                 @Valid @RequestBody request: UpdateSongRequest
         ): SongResponse {
+                val userId = securityContext.getCurrentUserId()
                 val command =
                         UpdateSongCommand(
                                 title = request.title,
@@ -476,7 +477,8 @@ class SongController(
                                 lyrics = request.lyrics,
                                 chords = request.chords,
                                 tagIds = request.tagIds,
-                                categoryIds = request.categoryIds
+                                categoryIds = request.categoryIds,
+                                updatedBy = userId
                         )
 
                 val result = catalogApplicationService.updateSong(id, command)
@@ -527,7 +529,8 @@ class SongController(
         @ResponseStatus(HttpStatus.NO_CONTENT)
         @PreAuthorize("hasRole('WORSHIP_LEADER') or hasRole('CHURCH_ADMIN')")
         fun deleteSong(@PathVariable id: UUID) {
-                val result = catalogApplicationService.deleteSong(id)
+                val userId = securityContext.getCurrentUserId()
+                val result = catalogApplicationService.deleteSong(id, deletedBy = userId)
                 if (result.isFailure) {
                         throw NotFoundException(
                                 result.exceptionOrNull()?.message ?: "Failed to delete song"

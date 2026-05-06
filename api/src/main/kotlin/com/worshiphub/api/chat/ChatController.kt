@@ -3,6 +3,7 @@ package com.worshiphub.api.chat
 import com.worshiphub.application.chat.ChatApplicationService
 import com.worshiphub.application.chat.SendMessageCommand
 import com.worshiphub.domain.collaboration.ChatMessage
+import com.worshiphub.domain.organization.repository.UserRepository
 import com.worshiphub.security.SecurityContext
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -20,7 +21,8 @@ import java.util.*
 @RestController
 class ChatController(
     private val chatApplicationService: ChatApplicationService,
-    private val securityContext: SecurityContext
+    private val securityContext: SecurityContext,
+    private val userRepository: UserRepository
 ) {
 
     @Operation(
@@ -118,11 +120,16 @@ class ChatController(
         return savedMessage.toDto()
     }
 
-    private fun ChatMessage.toDto() = ChatMessageResponseDto(
-        id = id,
-        teamId = teamId,
-        userId = userId,
-        content = content,
-        createdAt = createdAt
-    )
+    private fun ChatMessage.toDto(): ChatMessageResponseDto {
+        val user = userRepository.findById(userId)
+        val displayName = user?.let { "${it.firstName} ${it.lastName}" }
+        return ChatMessageResponseDto(
+            id = id,
+            teamId = teamId,
+            userId = userId,
+            content = content,
+            createdAt = createdAt,
+            userName = displayName
+        )
+    }
 }
