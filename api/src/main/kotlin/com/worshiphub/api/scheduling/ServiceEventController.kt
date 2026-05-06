@@ -324,6 +324,34 @@ class ServiceEventController(
     }
 
     @Operation(
+        summary = "Cancel a service",
+        description = "Cancels a scheduled service and notifies all assigned members",
+        security = [SecurityRequirement(name = "bearerAuth")]
+    )
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "Service cancelled successfully"),
+        ApiResponse(responseCode = "404", description = "Service not found"),
+        ApiResponse(responseCode = "403", description = "Insufficient permissions")
+    ])
+    @PreAuthorize("hasRole('WORSHIP_LEADER') or hasRole('CHURCH_ADMIN')")
+    @PutMapping("/{serviceId}/cancel")
+    fun cancelService(
+        @Parameter(description = "Service ID", required = true) @PathVariable serviceId: UUID,
+        @Valid @RequestBody request: CancelServiceRequest
+    ): CancelServiceResponse {
+        val result = schedulingApplicationService.cancelService(serviceId, request.reason)
+        return if (result.isSuccess) {
+            CancelServiceResponse(message = "Service cancelled successfully")
+        } else {
+            val exception = result.exceptionOrNull()
+            if (exception?.message?.contains("not found") == true) {
+                throw NotFoundException(exception.message ?: "Service not found")
+            }
+            throw BadRequestException(exception?.message ?: "Failed to cancel service")
+        }
+    }
+
+    @Operation(
         summary = "Delete recurring service",
         description = "Deletes a recurring service and its child instances that are in DRAFT/PUBLISHED status without ACCEPTED members.",
         security = [SecurityRequirement(name = "bearerAuth")]

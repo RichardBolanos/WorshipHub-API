@@ -99,3 +99,9 @@ data class ServiceEventResponse(
     @Schema(description = "Service status", example = "SCHEDULED", allowableValues = ["SCHEDULED", "CONFIRMED", "COMPLETED", "CANCELLED"])
     val status: String
 )
+
+@Schema(description = "Service cancellation response")
+data class CancelServiceResponse(
+    @Schema(description = "Success message", example = "Service cancelled successfully")
+    val message: String
+)

@@ -341,12 +341,14 @@ class SongController(
                 @Parameter(description = "Song ID", required = true) @PathVariable songId: UUID,
                 @Valid @RequestBody request: AddAttachmentRequest
         ): AttachmentResponse {
+                val userId = securityContext.getCurrentUserId()
                 val command =
                         AddAttachmentCommand(
                                 songId = songId,
                                 name = request.name,
                                 url = request.url,
-                                type = request.type
+                                type = request.type,
+                                addedBy = userId
                         )
 
                 val attachmentId = catalogApplicationService.addAttachment(command)
