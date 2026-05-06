@@ -48,7 +48,6 @@ class SecurityConfig(
                     .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/api-docs/**").permitAll()
                     .requestMatchers("/h2-console/**").permitAll() // Development only
                     .requestMatchers("/api/v1/auth/**").permitAll()
-                    .requestMatchers("/login/oauth2/**", "/oauth2/**").permitAll() // OAuth2 endpoints
                     .requestMatchers("/api/v1/auth/email/verify/**").permitAll()
                     .requestMatchers("/api/v1/auth/password/reset/**").permitAll()
                     .requestMatchers("/api/v1/auth/password/forgot/**").permitAll()
@@ -65,12 +64,9 @@ class SecurityConfig(
             .exceptionHandling { exceptions ->
                 exceptions.authenticationEntryPoint(jwtAuthenticationEntryPoint)
             }
-            .oauth2Login { oauth2 ->
-                oauth2
-                    .loginPage("/oauth2/authorization/google")
-                    .defaultSuccessUrl("/api/v1/auth/oauth2/google/callback", true)
-                    .failureUrl("/login?error=oauth2_error")
-            }
+            // NOTE: We do NOT use Spring Security's oauth2Login flow.
+            // Google Sign-In happens client-side (Flutter SDK); the resulting id_token
+            // is verified server-side by GoogleIdTokenVerifier in OAuth2Controller.
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
 
         return http.build()

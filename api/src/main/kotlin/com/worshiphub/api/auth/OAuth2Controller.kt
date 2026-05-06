@@ -3,43 +3,25 @@ package com.worshiphub.api.auth
 import com.worshiphub.application.auth.OAuth2AuthenticationService
 import com.worshiphub.application.auth.OAuth2LoginResult
 import com.worshiphub.application.auth.PendingInvitationDto
+import com.worshiphub.security.oauth2.GoogleIdTokenVerifier
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirements
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.ResponseEntity
-import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.web.bind.annotation.*
-import com.fasterxml.jackson.databind.ObjectMapper
-import java.util.Base64
 
 @Tag(name = "OAuth2 Authentication", description = "Google OAuth2 login operations")
 @RestController
 @RequestMapping("/api/v1/auth/oauth2")
 class OAuth2Controller(
-    private val oAuth2AuthenticationService: OAuth2AuthenticationService
+    private val oAuth2AuthenticationService: OAuth2AuthenticationService,
+    private val googleIdTokenVerifier: GoogleIdTokenVerifier
 ) {
-    private val objectMapper = ObjectMapper()
-
-    private fun decodeGoogleIdToken(idToken: String): Map<String, Any>? {
-        return try {
-            val parts = idToken.split(".")
-            if (parts.size != 3) return null
-            
-            val payload = parts[1]
-            val decodedBytes = Base64.getUrlDecoder().decode(payload)
-            val payloadJson = String(decodedBytes)
-            
-            @Suppress("UNCHECKED_CAST")
-            objectMapper.readValue(payloadJson, Map::class.java) as? Map<String, Any>
-        } catch (e: Exception) {
-            null
-        }
-    }
 
     @Operation(
         summary = "Handle Google OAuth2 callback",
-        description = "Processes Google OAuth2 authentication and handles pending invitations"
+        description = "Verifies the Google ID token (signature + audience) and processes the login. " +
+            "Handles pending invitations if the user has any."
     )
     @SecurityRequirements // No security required — public endpoint
     @GetMapping("/google/callback")
@@ -52,20 +34,30 @@ class OAuth2Controller(
                     OAuth2LoginResponse(success = false, message = "Google ID token not provided")
                 )
 
-            // Decode the JWT token to extract user information
-            val userInfo = decodeGoogleIdToken(token)
-                ?: return ResponseEntity.badRequest().body(
+            // SECURITY: verify the signature against Google's JWKS, validate `iss`, `aud`, `exp`.
+            // Returns null on any failure (invalid signature, wrong audience, expired, etc.).
+            val claims = googleIdTokenVerifier.verify(token)
+                ?: return ResponseEntity.status(401).body(
                     OAuth2LoginResponse(success = false, message = "Invalid Google ID token")
                 )
 
-            val validEmail = userInfo["email"] as? String
+            val validEmail = claims.getStringClaim("email")
                 ?: return ResponseEntity.badRequest().body(
-                    OAuth2LoginResponse(success = false, message = "Valid email not provided by Google")
+                    OAuth2LoginResponse(success = false, message = "Email claim missing in Google ID token")
                 )
 
-            val userName = (userInfo["name"] as? String)?.take(100) ?: ""
-            val userGivenName = (userInfo["given_name"] as? String)?.take(50) ?: ""
-            val userFamilyName = (userInfo["family_name"] as? String)?.take(50) ?: ""
+            // Optional: ensure Google has actually verified this email.
+            // This claim is `true` for normal Google-account flows and `false` for some federated logins.
+            val emailVerified = claims.getBooleanClaim("email_verified") ?: false
+            if (!emailVerified) {
+                return ResponseEntity.status(401).body(
+                    OAuth2LoginResponse(success = false, message = "Google email is not verified")
+                )
+            }
+
+            val userName = claims.getStringClaim("name")?.take(100) ?: ""
+            val userGivenName = claims.getStringClaim("given_name")?.take(50) ?: ""
+            val userFamilyName = claims.getStringClaim("family_name")?.take(50) ?: ""
 
             when (val result = oAuth2AuthenticationService.handleGoogleLogin(validEmail, userName, userGivenName, userFamilyName)) {
                 is OAuth2LoginResult.Success -> ResponseEntity.ok(
@@ -95,7 +87,7 @@ class OAuth2Controller(
         } catch (e: Exception) {
             ResponseEntity.internalServerError().body(
                 OAuth2LoginResponse(
-                    success = false, 
+                    success = false,
                     message = "Authentication failed: ${e.message?.take(100) ?: "Unknown error"}"
                 )
             )
@@ -141,7 +133,7 @@ class OAuth2Controller(
         } catch (e: Exception) {
             ResponseEntity.internalServerError().body(
                 OAuth2LoginResponse(
-                    success = false, 
+                    success = false,
                     message = "Invitation acceptance failed: ${e.message?.take(100) ?: "Unknown error"}"
                 )
             )
@@ -157,4 +149,3 @@ data class OAuth2LoginResponse(
     val pendingInvitations: List<PendingInvitationDto>? = null,
     val requiresInvitationAcceptance: Boolean = false
 )
-

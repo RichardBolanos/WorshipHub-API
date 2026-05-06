@@ -37,7 +37,9 @@ dependencies {
     
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-security")
-    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
+    // Note: We deliberately do NOT use spring-boot-starter-oauth2-client.
+    // Google Sign-In is handled by the client (Flutter SDK), and the backend only
+    // verifies the resulting id_token via nimbus-jose-jwt (provided by oauth2-jose below).
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     
@@ -80,6 +82,13 @@ dependencies {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+// Disable AOT processing for tests. Spring Boot 3.5+ enables `processTestAot`
+// by default, but it does not support `@MockkBean` (springmockk) nor older
+// `@MockBean` definitions, both used in this project. Disabling test AOT only
+// affects test startup time slightly; it does not affect the production native
+// image build (`nativeCompile`).
+tasks.named("processTestAot") { enabled = false }
 
 // Exclude pre-existing broken test files that have compilation errors
 sourceSets {
