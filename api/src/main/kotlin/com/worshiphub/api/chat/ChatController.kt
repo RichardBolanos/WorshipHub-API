@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -18,6 +19,7 @@ import java.time.LocalDateTime
 import java.util.*
 
 @Tag(name = "Team Chat", description = "REST API for team chat operations. Uses polling + FCM data messages for real-time updates.")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 class ChatController(
     private val chatApplicationService: ChatApplicationService,
@@ -27,14 +29,17 @@ class ChatController(
 
     @Operation(
         summary = "Get team chat history",
-        description = "Retrieves recent chat messages for a team, ordered by creation date descending."
+        description = "Retrieves recent chat messages for a team, ordered by creation date descending. " +
+            "Each message includes the sender's full display name (`userName`) resolved server-side."
     )
     @ApiResponses(value = [
         ApiResponse(responseCode = "200", description = "Chat history retrieved successfully"),
-        ApiResponse(responseCode = "404", description = "Team not found"),
-        ApiResponse(responseCode = "403", description = "User not authorized to view team chat")
+        ApiResponse(responseCode = "401", description = "User not authenticated"),
+        ApiResponse(responseCode = "403", description = "User not authorized to view team chat"),
+        ApiResponse(responseCode = "404", description = "Team not found")
     ])
     @GetMapping("/api/v1/teams/{teamId}/chat/history")
+    @PreAuthorize("hasRole('CHURCH_ADMIN') or hasRole('WORSHIP_LEADER') or hasRole('TEAM_MEMBER')")
     fun getChatHistory(
         @Parameter(description = "Team ID", required = true) @PathVariable teamId: UUID,
         @Parameter(description = "Maximum number of messages to retrieve") @RequestParam(defaultValue = "50") limit: Int
@@ -62,16 +67,18 @@ class ChatController(
      */
     @Operation(
         summary = "Get new chat messages since timestamp (polling endpoint)",
-        description = """Retrieves chat messages created after the given timestamp for incremental polling.
-            |The frontend should poll this endpoint every 5-10 seconds when the chat screen is active.
-            |FCM data messages complement polling by triggering immediate refresh on new messages."""
+        description = "Retrieves chat messages created after the given timestamp for incremental polling. " +
+            "The frontend should poll this endpoint every 5-10 seconds when the chat screen is active. " +
+            "FCM data messages complement polling by triggering immediate refresh on new messages."
     )
     @ApiResponses(value = [
         ApiResponse(responseCode = "200", description = "New messages retrieved successfully"),
-        ApiResponse(responseCode = "404", description = "Team not found"),
-        ApiResponse(responseCode = "403", description = "User not authorized to view team chat")
+        ApiResponse(responseCode = "401", description = "User not authenticated"),
+        ApiResponse(responseCode = "403", description = "User not authorized to view team chat"),
+        ApiResponse(responseCode = "404", description = "Team not found")
     ])
     @GetMapping("/api/v1/teams/{teamId}/chat/messages")
+    @PreAuthorize("hasRole('CHURCH_ADMIN') or hasRole('WORSHIP_LEADER') or hasRole('TEAM_MEMBER')")
     fun getMessagesSince(
         @Parameter(description = "Team ID", required = true) @PathVariable teamId: UUID,
         @Parameter(
@@ -94,12 +101,15 @@ class ChatController(
 
     @Operation(
         summary = "Send a chat message via REST",
-        description = "Sends a message to a team chat. A silent FCM data message is sent to team members to trigger chat refresh."
+        description = "Sends a message to a team chat and persists it. Triggers a CHAT_MESSAGE push event " +
+            "for the other team members (the sender does not receive a notification of their own message). " +
+            "A silent FCM data message is sent to subscribers to trigger an immediate chat refresh."
     )
     @ApiResponses(value = [
         ApiResponse(responseCode = "201", description = "Message sent successfully"),
         ApiResponse(responseCode = "400", description = "Invalid message data"),
-        ApiResponse(responseCode = "403", description = "Insufficient permissions")
+        ApiResponse(responseCode = "401", description = "User not authenticated"),
+        ApiResponse(responseCode = "403", description = "Insufficient permissions or not a team member")
     ])
     @PreAuthorize("hasRole('CHURCH_ADMIN') or hasRole('WORSHIP_LEADER') or hasRole('TEAM_MEMBER')")
     @PostMapping("/api/v1/teams/{teamId}/messages")

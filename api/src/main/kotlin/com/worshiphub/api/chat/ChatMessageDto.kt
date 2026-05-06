@@ -77,8 +77,12 @@ data class ChatMessageResponseDto(
     val createdAt: LocalDateTime,
     
     @Schema(
-        description = "Display name of message sender", 
-        example = "John Doe"
+        description = "Display name of the message sender, resolved as " +
+            "\"{firstName} {lastName}\" from the User entity. May be null if the user " +
+            "no longer exists in the database (e.g. deleted account); clients should " +
+            "fall back to a placeholder like \"Unknown\" in that case.",
+        example = "John Doe",
+        nullable = true
     )
     val userName: String? = null
 )

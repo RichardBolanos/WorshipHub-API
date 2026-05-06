@@ -325,13 +325,18 @@ class ServiceEventController(
 
     @Operation(
         summary = "Cancel a service",
-        description = "Cancels a scheduled service and notifies all assigned members",
+        description = "Cancels a scheduled service. Triggers a SERVICE_CANCELLED push event " +
+            "for all assigned members of the service (the user who triggers the cancellation " +
+            "does NOT receive the notification). The optional cancellation reason is included " +
+            "in the notification payload so members can see context.",
         security = [SecurityRequirement(name = "bearerAuth")]
     )
     @ApiResponses(value = [
         ApiResponse(responseCode = "200", description = "Service cancelled successfully"),
-        ApiResponse(responseCode = "404", description = "Service not found"),
-        ApiResponse(responseCode = "403", description = "Insufficient permissions")
+        ApiResponse(responseCode = "400", description = "Invalid request data or cancellation failed"),
+        ApiResponse(responseCode = "401", description = "User not authenticated"),
+        ApiResponse(responseCode = "403", description = "Insufficient permissions"),
+        ApiResponse(responseCode = "404", description = "Service not found")
     ])
     @PreAuthorize("hasRole('WORSHIP_LEADER') or hasRole('CHURCH_ADMIN')")
     @PutMapping("/{serviceId}/cancel")

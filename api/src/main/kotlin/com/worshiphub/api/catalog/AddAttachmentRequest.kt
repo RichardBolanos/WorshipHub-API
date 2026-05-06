@@ -34,10 +34,10 @@ data class AddAttachmentRequest(
     
     @field:NotNull(message = "Attachment type is required")
     @Schema(
-        description = "Type of attachment resource", 
-        example = "YOUTUBE", 
+        description = "Type of attachment resource",
+        example = "YOUTUBE_LINK",
         required = true,
-        allowableValues = ["YOUTUBE", "SPOTIFY", "PDF", "AUDIO", "OTHER"]
+        allowableValues = ["YOUTUBE_LINK", "SPOTIFY_LINK", "PDF_SHEET", "AUDIO_FILE", "OTHER_LINK"]
     )
     val type: AttachmentType
 )

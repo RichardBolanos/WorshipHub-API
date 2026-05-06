@@ -314,7 +314,10 @@ class SongController(
 
         @Operation(
                 summary = "Add song attachment",
-                description = "Adds a resource attachment to a song (YouTube link, PDF, etc.)",
+                description = "Adds a resource attachment to a song (YouTube link, PDF, etc.). " +
+                        "Triggers a SONG_ATTACHMENT push event for the song's creator and " +
+                        "previous commenters; the uploader does NOT receive a notification " +
+                        "of their own action.",
                 security = [SecurityRequirement(name = "bearerAuth")]
         )
         @ApiResponses(
@@ -362,7 +365,10 @@ class SongController(
 
         @Operation(
                 summary = "Add song comment",
-                description = "Adds a comment to a song for team discussions about arrangements",
+                description = "Adds a comment to a song for team discussions about arrangements. " +
+                        "Triggers a NEW_COMMENT push event for the song creator and previous " +
+                        "commenters; the comment author does NOT receive a notification of " +
+                        "their own comment.",
                 security = [SecurityRequirement(name = "bearerAuth")]
         )
         @ApiResponses(
@@ -441,7 +447,10 @@ class SongController(
 
         @Operation(
                 summary = "Update a song",
-                description = "Updates an existing song in the catalog",
+                description = "Updates an existing song in the catalog. Triggers a " +
+                        "SONG_UPDATED push event for users assigned to future services " +
+                        "whose setlist contains this song; the user who performs the " +
+                        "update does NOT receive the notification.",
                 security = [SecurityRequirement(name = "bearerAuth")]
         )
         @ApiResponses(
@@ -509,7 +518,11 @@ class SongController(
 
         @Operation(
                 summary = "Delete a song",
-                description = "Removes a song from the catalog",
+                description = "Removes a song from the catalog. Triggers a SONG_DELETED " +
+                        "push event for users assigned to services whose setlist included " +
+                        "this song, with the list of affected setlist names included in " +
+                        "the notification payload; the user who performs the deletion does " +
+                        "NOT receive the notification.",
                 security = [SecurityRequirement(name = "bearerAuth")]
         )
         @ApiResponses(
