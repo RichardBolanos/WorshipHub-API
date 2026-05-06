@@ -29,6 +29,7 @@ show_menu() {
     echo "  7. Ver logs (Todos los servicios)"
     echo "  8. Limpiar y reiniciar base de datos"
     echo "  9. Abrir Mailpit en navegador"
+    echo " 10. Build y Push imagen Docker a GitHub (GHCR)"
     echo "  0. Salir"
     echo ""
     read -p "Opcion: " option
@@ -249,6 +250,169 @@ open_mailpit() {
     read -p "Presiona Enter para continuar..."
 }
 
+push_ghcr() {
+    echo ""
+    echo "========================================"
+    echo "  Build y Push imagen Docker a GHCR"
+    echo "========================================"
+    echo ""
+    echo "Este proceso construira la imagen nativa de GraalVM"
+    echo "y la subira a GitHub Container Registry (ghcr.io)."
+    echo ""
+    echo "Requisitos:"
+    echo "  - Docker corriendo"
+    echo "  - Personal Access Token de GitHub con scope: write:packages"
+    echo "    https://github.com/settings/tokens"
+    echo ""
+
+    # Verify Docker is running
+    if ! docker info >/dev/null 2>&1; then
+        echo -e "${RED}[ERROR] Docker no esta corriendo${NC}"
+        echo ""
+        read -p "Presiona Enter para continuar..."
+        return
+    fi
+
+    # GitHub user/owner (lowercase required by GHCR)
+    local GHCR_OWNER="richardbolanos"
+    local IMAGE_NAME="worshiphub-api"
+    local GHCR_IMAGE="ghcr.io/${GHCR_OWNER}/${IMAGE_NAME}"
+
+    # Get short commit SHA for versioned tag
+    local GIT_SHA
+    GIT_SHA=$(git -C "$PROJECT_DIR" rev-parse --short HEAD 2>/dev/null || echo "manual")
+
+    echo "Imagen destino : ${GHCR_IMAGE}"
+    echo "Tags          : latest, ${GIT_SHA}"
+    echo ""
+
+    # Resolve token: prefer GHCR_TOKEN, fallback GITHUB_TOKEN, else prompt
+    local TOKEN="${GHCR_TOKEN:-${GITHUB_TOKEN:-}}"
+
+    if [ -z "$TOKEN" ]; then
+        echo ""
+        echo "========================================"
+        echo "  Token de GitHub no encontrado"
+        echo "========================================"
+        echo ""
+        echo "No se encontro la variable de entorno GHCR_TOKEN ni GITHUB_TOKEN."
+        echo ""
+        echo -e "${BLUE}Como crear un Personal Access Token (PAT):${NC}"
+        echo ""
+        echo "  1. Abre: https://github.com/settings/tokens/new"
+        echo "  2. Note: WorshipHub GHCR"
+        echo "  3. Expiration: 90 days (o la que prefieras)"
+        echo "  4. Marca los scopes:"
+        echo "       [x] write:packages   (sube imagenes)"
+        echo "       [x] read:packages    (lee imagenes)"
+        echo "       [x] delete:packages  (opcional, para borrar)"
+        echo "  5. Click 'Generate token' y COPIA el token (empieza con ghp_)"
+        echo ""
+        echo -e "${BLUE}Como guardarlo permanentemente (recomendado):${NC}"
+        echo ""
+        echo "  Linux/Mac (bash):"
+        echo "    echo 'export GHCR_TOKEN=ghp_xxxx' >> ~/.bashrc"
+        echo "    source ~/.bashrc"
+        echo ""
+        echo "  Linux/Mac (zsh):"
+        echo "    echo 'export GHCR_TOKEN=ghp_xxxx' >> ~/.zshrc"
+        echo "    source ~/.zshrc"
+        echo ""
+        echo "  Solo sesion actual:"
+        echo "    export GHCR_TOKEN=ghp_xxxx"
+        echo ""
+        echo "Despues de guardarlo, ABRE UNA NUEVA TERMINAL para que tome efecto."
+        echo ""
+        echo "----------------------------------------"
+        echo ""
+        read -p "Quieres pegar el token ahora para usarlo solo esta vez? (s/N): " confirm
+        if [[ ! $confirm =~ ^[Ss]$ ]]; then
+            echo ""
+            echo "Cancelado. Configura GHCR_TOKEN y vuelve a intentar."
+            echo ""
+            read -p "Presiona Enter para continuar..."
+            return
+        fi
+        echo ""
+        read -rsp "Pega tu Personal Access Token (oculto): " TOKEN
+        echo ""
+        if [ -z "$TOKEN" ]; then
+            echo ""
+            echo -e "${RED}[ERROR] No se proporciono ningun token. Cancelando.${NC}"
+            echo ""
+            read -p "Presiona Enter para continuar..."
+            return
+        fi
+        # Basic format validation
+        if [[ ! "$TOKEN" =~ ^gh[ps]_ ]]; then
+            echo ""
+            echo -e "${YELLOW}[ADVERTENCIA] El token no parece tener el formato esperado (ghp_... o ghs_...).${NC}"
+            read -p "Continuar de todos modos? (s/N): " cont
+            if [[ ! $cont =~ ^[Ss]$ ]]; then
+                return
+            fi
+        fi
+    fi
+
+    echo ""
+    echo "[1/3] Login en ghcr.io..."
+    if ! echo "$TOKEN" | docker login ghcr.io -u "$GHCR_OWNER" --password-stdin; then
+        echo ""
+        echo "========================================"
+        echo -e "${RED}[ERROR] Fallo el login en ghcr.io${NC}"
+        echo "========================================"
+        echo ""
+        echo "Posibles causas:"
+        echo "  - Token invalido o expirado"
+        echo "  - Token sin scope 'write:packages'"
+        echo "  - Usuario incorrecto (actual: ${GHCR_OWNER})"
+        echo ""
+        echo "Verifica tu token en: https://github.com/settings/tokens"
+        echo ""
+        read -p "Presiona Enter para continuar..."
+        return
+    fi
+
+    echo ""
+    echo "[2/3] Construyendo imagen nativa (esto puede tardar varios minutos)..."
+    cd "$PROJECT_DIR"
+    if ! docker build -f Dockerfile.native \
+        -t "${GHCR_IMAGE}:latest" \
+        -t "${GHCR_IMAGE}:${GIT_SHA}" .; then
+        echo -e "${RED}[ERROR] Fallo el build de la imagen.${NC}"
+        read -p "Presiona Enter para continuar..."
+        return
+    fi
+
+    echo ""
+    echo "[3/3] Haciendo push a GHCR..."
+    if ! docker push "${GHCR_IMAGE}:latest"; then
+        echo -e "${RED}[ERROR] Fallo el push de :latest${NC}"
+        read -p "Presiona Enter para continuar..."
+        return
+    fi
+    if ! docker push "${GHCR_IMAGE}:${GIT_SHA}"; then
+        echo -e "${RED}[ERROR] Fallo el push de :${GIT_SHA}${NC}"
+        read -p "Presiona Enter para continuar..."
+        return
+    fi
+
+    echo ""
+    echo "========================================"
+    echo -e "${GREEN}[OK] Imagen publicada correctamente${NC}"
+    echo "========================================"
+    echo ""
+    echo "URL : https://github.com/${GHCR_OWNER}?tab=packages"
+    echo "Imagen para Render.com:"
+    echo "  ${GHCR_IMAGE}:latest"
+    echo "  ${GHCR_IMAGE}:${GIT_SHA}"
+    echo ""
+    echo -e "${YELLOW}NOTA: Si la imagen es privada, en Render.com agrega${NC}"
+    echo -e "${YELLOW}Registry Credentials (Account Settings) usando tu PAT.${NC}"
+    echo ""
+    read -p "Presiona Enter para continuar..."
+}
+
 # Main loop
 while true; do
     show_menu
@@ -263,6 +427,7 @@ while true; do
         7) view_logs_all ;;
         8) clean_restart ;;
         9) open_mailpit ;;
+        10) push_ghcr ;;
         0) 
             echo ""
             echo "========================================"

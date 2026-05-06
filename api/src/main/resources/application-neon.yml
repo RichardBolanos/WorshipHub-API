@@ -6,21 +6,21 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://ep-falling-sun-a4hskmu4-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
-    username: neondb_owner
-    password: npg_wDurt4e8OMRB
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME:}
+    password: ${DATABASE_PASSWORD:}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: 5
-      minimum-idle: 1
+      maximum-pool-size: ${DB_POOL_SIZE:5}
+      minimum-idle: ${DB_POOL_MIN_IDLE:1}
       connection-timeout: 30000
       idle-timeout: 300000
       max-lifetime: 900000
       pool-name: WorshipHubNeonCP
-      
+
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: ${DDL_AUTO:update}
     show-sql: false
     properties:
       hibernate:
@@ -31,17 +31,17 @@ spring:
         order_inserts: true
         order_updates: true
     open-in-view: false
-    
+
   flyway:
-    enabled: false
-    
+    enabled: ${FLYWAY_ENABLED:false}
+
   security:
     require-ssl: false
 
 jwt:
-  secret: mySecretKeyForProductionThatIsAtLeast32CharactersLong123456789
-  expiration: 3600000
-  refresh-expiration: 86400000
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:3600000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:86400000}
 
 logging:
   level:

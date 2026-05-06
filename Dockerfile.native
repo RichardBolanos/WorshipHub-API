@@ -53,4 +53,7 @@ USER appuser
 # Expose application port
 EXPOSE 8080
 
+# Activate the prod profile by default (override via SPRING_PROFILES_ACTIVE env var)
+ENV SPRING_PROFILES_ACTIVE=prod
+
 ENTRYPOINT ["/app/worshiphub-api"]

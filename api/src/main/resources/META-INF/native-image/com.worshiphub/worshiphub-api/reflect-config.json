@@ -1,0 +1,9 @@
+[
+  {
+    "name": "com.worshiphub.config.DatabaseUrlEnvironmentPostProcessor",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  }
+]

@@ -2,17 +2,45 @@ server:
   port: ${PORT:8080}
   shutdown: graceful
 
+# ==============================================================
+# URL PUBLICA DE LA APLICACION
+# ==============================================================
+# Usado para construir links en emails (verificacion, reset password, invitaciones).
+# OBLIGATORIO en prod, sino los emails llevaran a http://localhost:8080.
+#
+# Ejemplos:
+#   APP_BASE_URL=https://worshiphub-api.onrender.com
+#   APP_BASE_URL=https://api.worshiphub.com   (dominio personalizado)
+# ==============================================================
+app:
+  base-url: ${APP_BASE_URL:http://localhost:8080}
+
 spring:
   lifecycle:
     timeout-per-shutdown-phase: 30s
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://ep-falling-sun-a4hskmu4-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require}
+    # ==============================================================
+    # CONFIGURACION DE BASE DE DATOS EN RENDER
+    # ==============================================================
+    # OPCION A (recomendada): UNA sola variable con todo embebido
+    #   DATABASE_URL=jdbc:postgresql://host/db?user=USR&password=PWD&sslmode=require
+    #
+    # OPCION B: URL estandar postgres:// (se convierte automaticamente)
+    #   DATABASE_URL=postgresql://USR:PWD@host/db?sslmode=require
+    #
+    # OPCION C: URL + credenciales separadas
+    #   DATABASE_URL=jdbc:postgresql://host/db?sslmode=require
+    #   DATABASE_USERNAME=usuario
+    #   DATABASE_PASSWORD=password
+    # ==============================================================
+    url: ${DATABASE_URL}
     driver-class-name: org.postgresql.Driver
-    username: ${DATABASE_USERNAME:neondb_owner}
-    password: ${DATABASE_PASSWORD:npg_wDurt4e8OMRB}
+    # username/password son opcionales si vienen embebidos en DATABASE_URL
+    username: ${DATABASE_USERNAME:}
+    password: ${DATABASE_PASSWORD:}
     hikari:
-      maximum-pool-size: 3
-      minimum-idle: 1
+      maximum-pool-size: ${DB_POOL_SIZE:3}
+      minimum-idle: ${DB_POOL_MIN_IDLE:1}
       connection-timeout: 20000
       idle-timeout: 300000
       max-lifetime: 900000
@@ -27,6 +55,40 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
+  # ==============================================================
+  # EMAIL / SMTP
+  # ==============================================================
+  # Variables a configurar en Render:
+  #   SPRING_MAIL_HOST           ej: smtp.gmail.com / smtp.sendgrid.net / smtp.mailgun.org
+  #   SPRING_MAIL_PORT           ej: 587 (STARTTLS) o 465 (SSL)
+  #   SPRING_MAIL_USERNAME       usuario SMTP (tambien usado como remitente "from")
+  #   SPRING_MAIL_PASSWORD       password / API key del proveedor
+  #   MAIL_SMTP_AUTH             true (default en prod)
+  #   MAIL_SMTP_STARTTLS         true (default en prod, usar puerto 587)
+  #
+  # Proveedores recomendados (gratis o low-cost):
+  #   - SendGrid (100 emails/dia gratis): SPRING_MAIL_HOST=smtp.sendgrid.net,
+  #     SPRING_MAIL_USERNAME=apikey, SPRING_MAIL_PASSWORD=<tu_api_key>
+  #   - Mailgun, Brevo (Sendinblue), AWS SES, Resend
+  #   - Gmail (NO recomendado para prod): requiere "App Password" de cuenta Google
+  # ==============================================================
+  mail:
+    host: ${SPRING_MAIL_HOST}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:true}
+            required: ${MAIL_SMTP_STARTTLS:true}
+        # Timeouts para evitar que un SMTP lento bloquee la app
+        connectiontimeout: 5000
+        timeout: 5000
+        writetimeout: 5000
+
 management:
   endpoints:
     web:
@@ -37,6 +99,11 @@ management:
       show-details: never
 
 logging:
+  # En produccion (Render/contenedores) los logs deben ir a stdout, no a archivo.
+  # Render captura stdout/stderr automaticamente.
+  # Para activar log a archivo: define la variable de entorno LOG_FILE=/ruta/al/log
+  file:
+    name: ${LOG_FILE:}
   level:
     com.worshiphub: INFO
     org.springframework: WARN

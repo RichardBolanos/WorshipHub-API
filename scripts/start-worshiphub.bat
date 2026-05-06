@@ -20,10 +20,11 @@ echo   7. Ver logs (Todos los servicios)
 echo   8. Limpiar y reiniciar base de datos
 echo   9. Abrir Mailpit en navegador
 echo   A. Reparar puertos ocupados
+echo   B. Build y Push imagen Docker a GitHub (GHCR)
 echo   0. Salir
 echo.
 
-choice /C 1234567890A /N /M "Opcion: "
+choice /C 1234567890AB /N /M "Opcion: "
 set option=%errorlevel%
 
 if %option%==1 goto start_local
@@ -37,6 +38,7 @@ if %option%==8 goto clean_restart
 if %option%==9 goto open_mailpit
 if %option%==10 goto end
 if %option%==11 goto fix_ports
+if %option%==12 goto push_ghcr
 
 :start_local
 echo.
@@ -283,6 +285,169 @@ goto menu
 :fix_ports
 echo.
 call "%~dp0fix-ports.bat"
+goto menu
+
+:push_ghcr
+echo.
+echo ========================================
+echo  Build y Push imagen Docker a GHCR
+echo ========================================
+echo.
+echo Este proceso construira la imagen nativa de GraalVM
+echo y la subira a GitHub Container Registry (ghcr.io).
+echo.
+echo Requisitos:
+echo   - Docker Desktop corriendo
+echo   - Personal Access Token de GitHub con scope: write:packages
+echo     https://github.com/settings/tokens
+echo.
+
+REM Verify Docker is running
+docker info >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Docker no esta corriendo. Inicia Docker Desktop.
+    echo.
+    pause
+    goto menu
+)
+
+REM GitHub user/owner (lowercase required by GHCR)
+set "GHCR_OWNER=richardbolanos"
+set "IMAGE_NAME=worshiphub-api"
+set "GHCR_IMAGE=ghcr.io/%GHCR_OWNER%/%IMAGE_NAME%"
+
+REM Get short commit SHA for versioned tag
+for /f "delims=" %%i in ('git -C "%~dp0.." rev-parse --short HEAD 2^>nul') do set "GIT_SHA=%%i"
+if "%GIT_SHA%"=="" set "GIT_SHA=manual"
+
+echo Imagen destino : %GHCR_IMAGE%
+echo Tags          : latest, %GIT_SHA%
+echo.
+
+REM Resolve token: prefer GHCR_TOKEN, fallback GITHUB_TOKEN, else prompt
+set "TOKEN=%GHCR_TOKEN%"
+if "%TOKEN%"=="" set "TOKEN=%GITHUB_TOKEN%"
+
+if "%TOKEN%"=="" (
+    echo.
+    echo ========================================
+    echo  Token de GitHub no encontrado
+    echo ========================================
+    echo.
+    echo No se encontro la variable de entorno GHCR_TOKEN ni GITHUB_TOKEN.
+    echo.
+    echo Como crear un Personal Access Token (PAT^):
+    echo.
+    echo   1. Abre: https://github.com/settings/tokens/new
+    echo   2. Note: WorshipHub GHCR
+    echo   3. Expiration: 90 days (o la que prefieras^)
+    echo   4. Marca los scopes:
+    echo        [x] write:packages   (sube imagenes^)
+    echo        [x] read:packages    (lee imagenes^)
+    echo        [x] delete:packages  (opcional, para borrar^)
+    echo   5. Click "Generate token" y COPIA el token (empieza con ghp_^)
+    echo.
+    echo Como guardarlo permanentemente (recomendado^):
+    echo.
+    echo   PowerShell:
+    echo     [Environment]::SetEnvironmentVariable("GHCR_TOKEN","ghp_xxxx","User"^)
+    echo.
+    echo   CMD (solo sesion actual^):
+    echo     set GHCR_TOKEN=ghp_xxxx
+    echo.
+    echo   CMD (permanente^):
+    echo     setx GHCR_TOKEN "ghp_xxxx"
+    echo.
+    echo Despues de guardarlo, ABRE UNA NUEVA TERMINAL para que tome efecto.
+    echo.
+    echo ----------------------------------------
+    echo.
+    choice /C SN /M "Quieres pegar el token ahora para usarlo solo esta vez? (S/N): "
+    if errorlevel 2 (
+        echo.
+        echo Cancelado. Configura GHCR_TOKEN y vuelve a intentar.
+        echo.
+        pause
+        goto menu
+    )
+    echo.
+    set /p "TOKEN=Pega tu Personal Access Token: "
+    if "!TOKEN!"=="" (
+        echo.
+        echo [ERROR] No se proporciono ningun token. Cancelando.
+        echo.
+        pause
+        goto menu
+    )
+    REM Basic format validation
+    echo !TOKEN! | findstr /R "^gh[ps]_" >nul
+    if errorlevel 1 (
+        echo.
+        echo [ADVERTENCIA] El token no parece tener el formato esperado (ghp_... o ghs_...^).
+        choice /C SN /M "Continuar de todos modos? (S/N): "
+        if errorlevel 2 goto menu
+    )
+)
+
+echo.
+echo [1/3] Login en ghcr.io...
+echo !TOKEN! | docker login ghcr.io -u %GHCR_OWNER% --password-stdin
+if errorlevel 1 (
+    echo.
+    echo ========================================
+    echo [ERROR] Fallo el login en ghcr.io
+    echo ========================================
+    echo.
+    echo Posibles causas:
+    echo   - Token invalido o expirado
+    echo   - Token sin scope 'write:packages'
+    echo   - Usuario incorrecto (actual: %GHCR_OWNER%^)
+    echo.
+    echo Verifica tu token en: https://github.com/settings/tokens
+    echo.
+    pause
+    goto menu
+)
+
+echo.
+echo [2/3] Construyendo imagen nativa (esto puede tardar varios minutos)...
+cd /d "%~dp0.."
+docker build -f Dockerfile.native -t %GHCR_IMAGE%:latest -t %GHCR_IMAGE%:%GIT_SHA% .
+if errorlevel 1 (
+    echo [ERROR] Fallo el build de la imagen.
+    pause
+    goto menu
+)
+
+echo.
+echo [3/3] Haciendo push a GHCR...
+docker push %GHCR_IMAGE%:latest
+if errorlevel 1 (
+    echo [ERROR] Fallo el push de :latest
+    pause
+    goto menu
+)
+docker push %GHCR_IMAGE%:%GIT_SHA%
+if errorlevel 1 (
+    echo [ERROR] Fallo el push de :%GIT_SHA%
+    pause
+    goto menu
+)
+
+echo.
+echo ========================================
+echo [OK] Imagen publicada correctamente
+echo ========================================
+echo.
+echo URL : https://github.com/%GHCR_OWNER%?tab=packages
+echo Imagen para Render.com:
+echo   %GHCR_IMAGE%:latest
+echo   %GHCR_IMAGE%:%GIT_SHA%
+echo.
+echo NOTA: Si la imagen es privada, en Render.com agrega
+echo Registry Credentials (Account Settings) usando tu PAT.
+echo.
+pause
 goto menu
 
 :end
