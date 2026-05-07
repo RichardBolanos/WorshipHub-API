@@ -141,6 +141,27 @@ management:
     health:
       show-details: never
 
+# ==============================================================
+# OpenAPI / Swagger
+# ==============================================================
+# Disabled in production. Reasons:
+#   1. Public-facing services should not advertise their internal API
+#      surface or DTOs to anonymous traffic.
+#   2. springdoc-openapi uses Kotlin reflection to walk @RequestBody /
+#      @Schema classes. The GraalVM native image we ship to Render does
+#      not include reflection metadata for every DTO + every Swagger
+#      annotation, so requests to /v3/api-docs throw
+#      KotlinReflectionInternalError at runtime.
+#   3. Swagger UI is a development tool — devs should hit a non-prod
+#      profile (default / local / h2) to browse endpoints.
+# Local development still gets full Swagger via the default profile.
+# ==============================================================
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 logging:
   # En produccion (Render/contenedores) los logs deben ir a stdout, no a archivo.
   # Render captura stdout/stderr automaticamente.
