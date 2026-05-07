@@ -75,11 +75,25 @@ spring:
   # Brevo, SendGrid, AWS SES, etc. asignan un usuario SMTP de servicio que NO
   # debe aparecer como sender. El "From:" del email lo controla APP_EMAIL_FROM.
   #
+  # ⚠️ PUERTO 2525 EN RENDER / CLOUD HOSTING
+  # ----------------------------------------
+  # Render Free / muchos PaaS bloquean conexiones salientes al puerto 587
+  # para prevenir spam. El sintoma es:
+  #
+  #   ERROR EmailServiceImpl - Failed to send email ...
+  #   org.eclipse.angus.mail.util.MailConnectException:
+  #     Couldn't connect to host, port: smtp-relay.brevo.com, 587; timeout
+  #   java.net.SocketTimeoutException: Connect timed out
+  #
+  # Si ves esto en logs: cambia SPRING_MAIL_PORT a 2525 (puerto alterno
+  # de Brevo, mismo servidor, misma autenticacion, mismo cifrado STARTTLS).
+  #
   # Variables a configurar en Render:
   #
   #   --- SMTP (autenticacion) ---
   #   SPRING_MAIL_HOST       ej: smtp-relay.brevo.com
-  #   SPRING_MAIL_PORT       ej: 587 (STARTTLS) o 2525 (alterno si 587 esta bloqueado)
+  #   SPRING_MAIL_PORT       PRIMERO probar 2525 (mas confiable en cloud);
+  #                          587 si tu host no bloquea conexiones SMTP.
   #   SPRING_MAIL_USERNAME   usuario SMTP del proveedor
   #                          - Brevo: el "Iniciar sesion" del dashboard SMTP
   #                            (formato xxxxxxx@smtp-brevo.com)

@@ -156,17 +156,59 @@ class EmailServiceImpl(
         } catch (e: Exception) {
             // SMTP failures must NOT break the surrounding business operation
             // (e.g. user registration, invitation creation). The user can always
-            // trigger a "resend" flow. We log the failure for ops visibility.
+            // trigger a "resend" flow. We log the failure for ops visibility,
+            // with a hint when the cause matches a well-known deployment pitfall.
+            val hint = diagnoseSmtpFailure(e)
             logger.error(
                 "Failed to send email to {} (subject='{}'). Email NOT sent — " +
-                    "the user-facing operation continues without rollback.",
+                    "the user-facing operation continues without rollback.{}",
                 sanitizeForLog(to),
                 subject,
+                if (hint.isNotEmpty()) " HINT: $hint" else "",
                 e
             )
         }
     }
-    
+
+    /**
+     * Best-effort, human-readable diagnosis for the most common SMTP failures
+     * we have seen in production. Returned string is appended to the ERROR
+     * log so on-call engineers can fix the issue without scrolling stack
+     * traces or grepping documentation.
+     */
+    private fun diagnoseSmtpFailure(e: Throwable): String {
+        // Walk the cause chain — the root cause is what actually identifies
+        // the failure mode (Spring wraps it in MailSendException).
+        var current: Throwable? = e
+        while (current != null) {
+            val msg = current.message ?: ""
+            when {
+                current is java.net.SocketTimeoutException &&
+                    msg.contains("Connect timed out", ignoreCase = true) ->
+                    return "TCP connect to the SMTP host timed out. " +
+                        "Most cloud hosts (Render, Heroku, Fly, Railway) block outbound port 587. " +
+                        "Try SPRING_MAIL_PORT=2525 (Brevo's alternate port; SendGrid also supports 2525)."
+                msg.contains("Authentication failed", ignoreCase = true) ||
+                    msg.contains("535", ignoreCase = false) ->
+                    return "SMTP authentication rejected by the server. " +
+                        "Double-check SPRING_MAIL_USERNAME and SPRING_MAIL_PASSWORD. " +
+                        "For Brevo: USERNAME is the 'Iniciar sesion' value (xxxxxxx@smtp-brevo.com), " +
+                        "PASSWORD is a Clave SMTP (NOT your account password)."
+                msg.contains("sender", ignoreCase = true) &&
+                    (msg.contains("not allowed", ignoreCase = true) ||
+                        msg.contains("not verified", ignoreCase = true)) ->
+                    return "The 'From:' address is not a verified sender. " +
+                        "Check APP_EMAIL_FROM matches a sender verified at " +
+                        "https://app.brevo.com/senders/list (or your provider's equivalent)."
+                msg.contains("UnknownHostException", ignoreCase = true) ->
+                    return "DNS resolution failed for the SMTP host. " +
+                        "Verify SPRING_MAIL_HOST is spelled correctly."
+            }
+            current = current.cause
+        }
+        return ""
+    }
+
     private fun sanitizeForLog(input: String): String {
         return input.replace("[\r\n\t]".toRegex(), "_")
     }
